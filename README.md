@@ -1,4 +1,4 @@
-# HierarchicalMatrices
+# HierarchicalMatrices.jl
 
 This package provides a flexible framework for hierarchical matrices in Julia.
 

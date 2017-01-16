@@ -69,7 +69,7 @@ macro hierarchicalmatrix(HierarchicalMatrix, matrices...)
                 elseif Hmn == $l
                     return size(getindex(H.$T,m,n),k)"
             end
-            str *="
+            str *= "
                 end
                 return 0
             end"
@@ -90,7 +90,7 @@ macro hierarchicalmatrix(HierarchicalMatrix, matrices...)
                 elseif Hmn == $l
                     return getindex(getindex(H.$T,m,n),i,j)"
             end
-            str *="
+            str *= "
                 end
                 return zero(S)
             end"
