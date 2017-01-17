@@ -42,16 +42,14 @@ macro hierarchicalmatrix(HierarchicalMatrix, matrices...)
         @generated function $HierarchicalMatrix{T}(::Type{T}, M::Int, N::Int)
             L = length(fieldnames($HierarchicalMatrix))
             HM = $HierarchicalMatrix
-            ex = :(begin end)
-            push!(ex.args, :(data = Vector{Any}($L)))
-            push!(ex.args, :(data[1] = Matrix{$HM{T}}(M, N)))
+            str = "$HM(Matrix{$HM}(M, N), "
             for l in 2:L-1
                 S = $matrices[l-1]
-                push!(ex.args, :(data[$l] = Matrix{$S{T}}(M, N)))
+                str *= "Matrix{$S{T}}(M, N), "
             end
-            push!(ex.args, :(data[$L] = zeros(Int, M, N)))
-            push!(ex.args, :($HM(data...)))
-            return ex
+            str *= "zeros(Int, M, N))"
+            println(str)
+            return parse(str)
         end
         $HierarchicalMatrix(M::Int, N::Int) = $HierarchicalMatrix(Float64, M, N)
 

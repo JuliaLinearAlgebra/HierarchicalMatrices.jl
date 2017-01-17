@@ -73,6 +73,15 @@ function getindex{T}(B::EvenBarycentricMatrix{T}, i::Int, j::Int)
     ret
 end
 
+function convert{T}(::Type{LowRankMatrix},B::BarycentricMatrix{T})
+    QRU = qrfact!(B.W')
+    QRV = qrfact(B.F)
+    SVD = svdfact!(QRU[:R]*QRV[:R]')
+    r = getrank(SVD[:S])
+    LowRankMatrix((QRU[:Q]*SVD[:U])[:,1:r], Diagonal(SVD[:S][1:r]), (QRV[:Q]*SVD[:V])[:,1:r])
+end
+
+
 function chebyshevpoints{T<:Number}(::Type{T}, n::Integer)
     x = zeros(T, n)
     nd2 = n÷2
