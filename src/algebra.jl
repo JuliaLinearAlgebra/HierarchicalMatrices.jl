@@ -33,7 +33,7 @@ end
 # This file implements A_mul_B! overrides when A is a small matrix and u and v
 # are larger vectors, but we want to operate in-place, equivalent to:
 #
-# u[istart:istart+size(A, 1)] += A*v[jstart:jstart+size(A, 2)]
+# u[istart:istart+size(A, 1)-1] += A*v[jstart:jstart+size(A, 2)-1]
 #
 
 # Generic Matrix
@@ -252,4 +252,108 @@ function A_mul_B!{T}(u::Vector{T}, B::EvenBarycentricMatrix{T}, v::AbstractVecto
     end
 
     u
+end
+
+
+
+# C = A*Diagonal(b[jstart:jstart+size(A, 2)-1])
+
+function scale!(C::Matrix, A::Matrix, b::Vector, jstart::Int)
+    m, n = size(A)
+    p, q = size(C)
+    jshift = jstart-1
+    @inbounds for j = 1:n
+        bj = b[jshift+j]
+        for i = 1:m
+            C[i,j] = A[i,j]*bj
+        end
+    end
+    C
+end
+
+function scale!(C::LowRankMatrix, A::LowRankMatrix, b::Vector, jstart::Int)
+    scale!(C.V, b, A.V, jstart)
+    C
+end
+
+# C = Diagonal(b[istart:istart+size(A, 1)-1])*A
+
+function scale!(C::Matrix, b::Vector, A::Matrix, istart::Int)
+    m, n = size(A)
+    p, q = size(C)
+    ishift = istart-1
+    @inbounds for j = 1:n, i = 1:m
+        C[i,j] = A[i,j]*b[ishift+i]
+    end
+    C
+end
+
+function scale!(C::LowRankMatrix, b::Vector, A::LowRankMatrix, istart::Int)
+    scale!(C.U, b, A.U, istart)
+    C
+end
+
+
+# Add e_j^T u[istart:istart+size(L, 1)-1] to A.
+
+function add_col!{T}(A::AbstractMatrix{T}, u::Vector{T}, istart::Int, j::Int)
+    ishift, m = istart-1, size(A, 1)
+    jm = (j-1)*m
+    @simd for i = 1:m
+        @inbounds A[i+jm] += u[i+ishift]
+    end
+    A
+end
+
+function add_col!{T<:BlasReal}(A::Matrix{T}, u::Vector{T}, istart::Int, j::Int)
+    m, n = size(A, 1), size(A, 2)
+    BLAS.axpy!(m, one(T), pointer(u, istart), 1, pointer(A, (j-1)*m+1), 1)
+    A
+end
+
+function add_col{T}(A::AbstractMatrix{T}, u::Vector{T}, istart::Int, j::Int)
+    B = deepcopy(A)
+    ishift, m = istart-1, size(A, 1)
+    jm = (j-1)*m
+    @simd for i = 1:m
+        @inbounds B[i+jm] += u[i+ishift]
+    end
+    B
+end
+
+function add_col{T<:BlasReal}(A::Matrix{T}, u::Vector{T}, istart::Int, j::Int)
+    m, n = size(A, 1), size(A, 2)
+    B = Matrix{T}(m, n)
+    BLAS.blascopy!(m*n, A, 1, B, 1)
+    BLAS.axpy!(m, one(T), pointer(u, istart), 1, pointer(B, (j-1)*m+1), 1)
+    B
+end
+
+# Add e_j^T u[istart:istart+size(L, 1)-1] to UΣV^T.
+
+function add_col{T}(L::LowRankMatrix{T}, u::Vector{T}, istart::Int, j::Int)
+    U, Σ, V = L.U, L.Σ, L.V
+    U1 = hcat(U, u[istart:istart+size(L,1)-1])
+    Σ1 = Diagonal(vcat(Σ.diag, one(T)))
+    V1 = hcat(V, zeros(T, size(L, 2)))
+    V1[j,rank(L)+1] = one(T)
+
+    LowRankMatrix(U1,Σ1,V1)
+end
+
+function add_col{T<:BlasReal}(L::LowRankMatrix{T}, u::Vector{T}, istart::Int, j::Int)
+    U, Σ, V = L.U, L.Σ, L.V
+    m, n, r, un = size(L, 1), size(L, 2), rank(L), one(T)
+    U1 = Matrix{T}(m, r+1)
+    BLAS.blascopy!(m, pointer(u, istart), 1, U1, 1)
+    BLAS.blascopy!(m*r, U, 1, pointer(U1, m+1), 1)
+    diag = Vector{T}(r+1)
+    BLAS.blascopy!(r, Σ.diag, 1, pointer(diag, 2), 1)
+    Base.unsafe_setindex!(diag, un, 1)
+    Σ1 = Diagonal(diag)
+    V1 = zeros(T, n, r+1)
+    BLAS.blascopy!(n*r, V, 1, pointer(V1, n+1), 1)
+    Base.unsafe_setindex!(V1, un, j, 1)
+
+    LowRankMatrix(U1,Σ1,V1)
 end

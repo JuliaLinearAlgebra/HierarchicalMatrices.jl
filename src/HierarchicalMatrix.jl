@@ -25,6 +25,9 @@ end
 
 A_mul_B!(u::Vector, H::AbstractHierarchicalMatrix, v::AbstractVector) = A_mul_B!(u, H, v, 1, 1)
 
+
+add_col!(H::AbstractHierarchicalMatrix, u::Vector, j::Int) = add_col!(H, u, 1, j)
+
 macro hierarchicalmatrix(HierarchicalMatrix, matrices...)
     blocks = :(begin end)
     push!(blocks.args, :($(Symbol("$(HierarchicalMatrix)blocks"))::Matrix{$HierarchicalMatrix{T}}))
@@ -33,6 +36,8 @@ macro hierarchicalmatrix(HierarchicalMatrix, matrices...)
     end
     return esc(quote
         export $HierarchicalMatrix
+
+        import HierarchicalMatrices: add_col!
 
         immutable $HierarchicalMatrix{T} <: AbstractHierarchicalMatrix{T}
             $blocks
@@ -144,6 +149,100 @@ macro hierarchicalmatrix(HierarchicalMatrix, matrices...)
                     p += blockgetsize(H, m, N, 1)
                 end
                 return u
+            end"
+            return parse(str)
+        end
+
+        @generated function Base.scale!(H::$HierarchicalMatrix, b::AbstractVector, jstart::Int)
+            L = length(fieldnames(H))-1
+            T = fieldname(H, 1)
+            str = "
+            begin
+                M, N = blocksize(H)
+                q = 0
+                for n = 1:N
+                    for m = 1:M
+                        Hmn = H.assigned[m,n]
+                        if Hmn == 1
+                            scale!(getindex(H.$T, m, n), b, jstart + q)"
+            for l in 2:L
+                T = fieldname(H, l)
+                str *= "
+                        elseif Hmn == $l
+                            scale!(getindex(H.$T, m, n), getindex(H.$T, m, n), b, jstart + q)"
+            end
+            str *= "
+                        end
+                    end
+                    q += blockgetsize(H, 1, n, 2)
+                end
+                return H
+            end"
+            return parse(str)
+        end
+
+        @generated function Base.scale!(b::AbstractVector, H::$HierarchicalMatrix, istart::Int)
+            L = length(fieldnames(H))-1
+            T = fieldname(H, 1)
+            str = "
+            begin
+                M, N = blocksize(H)
+                p = 0
+                for m = 1:M
+                    for n = 1:N
+                        Hmn = H.assigned[m,n]
+                        if Hmn == 1
+                            scale!(b, getindex(H.$T, m, n), istart + p)"
+            for l in 2:L
+                T = fieldname(H, l)
+                str *= "
+                        elseif Hmn == $l
+                            scale!(getindex(H.$T, m, n), b, getindex(H.$T, m, n), istart + p)"
+            end
+            str *= "
+                        end
+                    end
+                    p += blockgetsize(H, m, N, 1)
+                end
+                return H
+            end"
+            return parse(str)
+        end
+
+        @generated function add_col!{S}(H::$HierarchicalMatrix{S}, u::Vector{S}, istart::Int, j::Int)
+            L = length(fieldnames(H))-1
+            T = fieldname(H, 1)
+            str = "
+            begin
+                H1 = deepcopy(H)
+                M, N = blocksize(H)
+                n = 1
+                q = blockgetsize(H, 1, n, 2)
+                while q < j
+                    n += 1
+                    q += blockgetsize(H, 1, n, 2)
+                end
+                q -= blockgetsize(H, 1, n, 2)
+                p = 0
+                for m = 1:M
+                    Hmn = H.assigned[m,n]
+                    if Hmn == 1
+                        add_col!(getindex(H.$T, m, n), u, istart + p, j - q)"
+            for l in 2:L
+                T = fieldname(H, l)
+                str *= "
+                    elseif Hmn == $l
+                        if isimmutable(getindex(H.$T, m, n))
+                            setblock!(H, add_col(getindex(H.$T, m, n), u, istart + p, j - q), m, n)
+                        else
+                            add_col!(getindex(H.$T, m, n), u, istart + p, j - q)
+                        end"
+            end
+            str *= "
+                    end
+                    p += blockgetsize(H, m, N, 1)
+                end
+                return H
             end"
             return parse(str)
         end
