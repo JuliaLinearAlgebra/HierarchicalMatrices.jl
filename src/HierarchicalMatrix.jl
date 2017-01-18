@@ -48,7 +48,6 @@ macro hierarchicalmatrix(HierarchicalMatrix, matrices...)
                 str *= "Matrix{$S{T}}(M, N), "
             end
             str *= "zeros(Int, M, N))"
-            println(str)
             return parse(str)
         end
         $HierarchicalMatrix(M::Int, N::Int) = $HierarchicalMatrix(Float64, M, N)

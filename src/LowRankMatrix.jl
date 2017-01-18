@@ -10,7 +10,10 @@ immutable LowRankMatrix{T} <: AbstractLowRankMatrix{T}
     U::Matrix{T}
     Σ::Diagonal{T}
     V::Matrix{T}
+    temp::Vector{T}
 end
+
+LowRankMatrix{T}(U::Matrix{T}, Σ::Diagonal{T}, V::Matrix{T}) = LowRankMatrix(U, Σ, V, zero(Σ.diag))
 
 size(L::LowRankMatrix) = size(L.U, 1), size(L.V, 1)
 rank(L::LowRankMatrix) = length(L.Σ.diag)
