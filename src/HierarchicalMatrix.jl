@@ -25,6 +25,8 @@ end
 
 A_mul_B!(u::Vector, H::AbstractHierarchicalMatrix, v::AbstractVector) = A_mul_B!(u, H, v, 1, 1)
 
+scale!(H::AbstractHierarchicalMatrix, b::AbstractVector) = scale!(H, b, 1)
+scale!(b::AbstractVector, H::AbstractHierarchicalMatrix) = scale!(b, H, 1)
 
 add_col!(H::AbstractHierarchicalMatrix, u::Vector, j::Int) = add_col!(H, u, 1, j)
 
