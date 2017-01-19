@@ -42,7 +42,8 @@ end
 convert{T}(::Type{LowRankMatrix},A::AbstractMatrix{T}) = svdtrunc(A)
 
 function getrank{T<:Real}(σ::Vector{T})
-    r, tol = length(σ), 3first(σ)*eps(T)
+    r = length(σ)
+    tol = r*eps(first(σ))
     while r ≥ 1
         if σ[r] > tol return r end
         r -= 1
