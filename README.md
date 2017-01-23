@@ -1,18 +1,20 @@
 # HierarchicalMatrices.jl
 
-This package provides a flexible framework for hierarchical matrices in Julia.
+This package provides a flexible framework for hierarchical data types in Julia.
 
 Create your own hierarchical matrix as simply as:
 ```julia
 julia> using HierarchicalMatrices
 
-julia> @hierarchicalmatrix HierarchicalMatrix LowRankMatrix Matrix
+julia> @hierarchical MyHierarchicalMatrix LowRankMatrix Matrix
 
 ```
-The invocation of the `@hierarchicalmatrix` macro creates the immutable type
-`HierarchicalMatrix` and endows it with fields of `HierarchicalMatrixblocks`,
+The invocation of the `@hierarchical` macro creates an abstract supertype
+`AbstractMyHierarchicalMatrix{T} <: AbstractMatrix{T}` and the immutable type
+`MyHierarchicalMatrix`, endowing it with fields of `HierarchicalMatrixblocks`,
 `LowRankMatrixblocks`, `Matrixblocks`, and a matrix of integers, `assigned`, to
-determine which type of block is active.
+determine which type of block is active. The package comes pre-loaded with a
+`HierarchicalMatrix`.
 
 See the example on speeding up the matrix-vector product with Cauchy matrices.
 

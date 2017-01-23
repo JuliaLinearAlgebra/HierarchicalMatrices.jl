@@ -43,6 +43,7 @@ convert{T}(::Type{LowRankMatrix},A::AbstractMatrix{T}) = svdtrunc(A)
 
 function getrank{T<:Real}(σ::Vector{T})
     r = length(σ)
+    r == 0 && (return 0)
     tol = r*eps(first(σ))
     while r ≥ 1
         if σ[r] > tol return r end
@@ -56,6 +57,13 @@ function svdtrunc(A::AbstractMatrix)
     SVD = svdfact(A)
     r = getrank(SVD[:S])
     LowRankMatrix(SVD[:U][:,1:r], Diagonal(SVD[:S][1:r]), SVD[:V][:,1:r])
+end
+
+function lrzeros{T}(::Type{T}, m::Int, n::Int)
+    U = zeros(T, m, 0)
+    Σ = Diagonal(zeros(T, 0))
+    V = zeros(T, n, 0)
+    LowRankMatrix(U, Σ, V)
 end
 
 function (+){T}(L1::LowRankMatrix{T}, L2::LowRankMatrix{T})

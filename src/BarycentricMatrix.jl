@@ -2,7 +2,7 @@ abstract AbstractBarycentricMatrix{T} <: AbstractLowRankMatrix{T}
 
 size(B::AbstractBarycentricMatrix) = (B.b-B.a+1, B.d-B.c+1)
 
-for BMAT in (:BarycentricMatrix,:EvenBarycentricMatrix)
+for BMAT in (:EvenBarycentricMatrix,)
     @eval begin
 
         immutable $BMAT{T} <: AbstractBarycentricMatrix{T}
@@ -51,20 +51,10 @@ for BMAT in (:BarycentricMatrix,:EvenBarycentricMatrix)
     end
 end
 
-function getindex{T}(B::BarycentricMatrix{T}, i::Int, j::Int)
-    ret = zero(T)
-
-    @inbounds for k = 1:length(B.x)
-        ret += B.F[j,k]*B.W[k,i]
-    end
-
-    ret
-end
-
 function getindex{T}(B::EvenBarycentricMatrix{T}, i::Int, j::Int)
     ret = zero(T)
 
-    if iseven(B.a+B.c+i+j)
+    if iseven(size(B, 1)+size(B, 2)+i+j)
         @inbounds for k = 1:length(B.x)
             ret += B.F[j,k]*B.W[k,i]
         end
@@ -73,12 +63,35 @@ function getindex{T}(B::EvenBarycentricMatrix{T}, i::Int, j::Int)
     ret
 end
 
-function convert{T}(::Type{LowRankMatrix},B::BarycentricMatrix{T})
-    QRU = qrfact!(B.W')
-    QRV = qrfact(B.F)
-    SVD = svdfact!(QRU[:R]*QRV[:R]')
-    r = getrank(SVD[:S])
-    LowRankMatrix((QRU[:Q]*SVD[:U])[:,1:r], Diagonal(SVD[:S][1:r]), (QRV[:Q]*SVD[:V])[:,1:r])
+
+function barycentricmatrix{T}(::Type{T}, f::Function, a::Int64, b::Int64, c::Int64, d::Int64)
+    n = 18
+    x = chebyshevpoints(T, n)
+    λ = chebyshevbarycentricweights(T, n)
+
+    w = zeros(T, b-a+1)
+    β = zeros(T, n)
+    @inbounds for i = a:b
+        for k = 1:n
+            w[i+1-a] += λ[k]*inv(2i-a-b-(b-a)*x[k])
+        end
+    end
+
+    W = zeros(T, b-a+1, n)
+    @inbounds for k = 1:n
+        for i = a:b
+            W[i-a+1,k] = λ[k]*inv((2i-a-b-(b-a)*x[k])*w[i+1-a])
+        end
+    end
+
+    F = zeros(T, d-c+1, n)
+    @inbounds for k = 1:n
+        for j = c:d
+            F[j-c+1,k] = f(T,(a+b)/2+(b-a)*x[k]/2,j)
+        end
+    end
+
+    LowRankMatrix(W, Diagonal(ones(T, n)), F)
 end
 
 

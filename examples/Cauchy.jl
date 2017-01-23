@@ -23,29 +23,27 @@ end
 
 using HierarchicalMatrices
 
-@hierarchicalmatrix CauchyMatrix BarycentricMatrix Matrix
+cauchymatrix{T}(::Type{T}, f::Function, b::Int, d::Int) = cauchymatrix(T, f, 1, b, 1, d)
 
-CauchyMatrix{T}(::Type{T}, f::Function, b::Int, d::Int) = CauchyMatrix(T, f, 1, b, 1, d)
-
-function CauchyMatrix{T}(::Type{T}, f::Function, a::Int, b::Int, c::Int, d::Int)
+function cauchymatrix{T}(::Type{T}, f::Function, a::Int, b::Int, c::Int, d::Int)
     if (b-a+1) < BLOCKSIZE && (d-c+1) < BLOCKSIZE
         i = (b-a)÷2
         j = (d-c)÷2
-        C = CauchyMatrix(T, 2, 2)
-        setblock!(C, T[f(T,i,j) for i=a:a+i, j=c:c+j], 1, 1)
-        setblock!(C, T[f(T,i,j) for i=a:a+i, j=c+j+1:d], 1, 2)
-        setblock!(C, T[f(T,i,j) for i=a+i+1:b, j=c:c+j], 2, 1)
-        setblock!(C, T[f(T,i,j) for i=a+i+1:b, j=c+j+1:d], 2, 2)
-        C
+        H = HierarchicalMatrix(T, 2, 2)
+        H[Block(1), Block(1)] = T[f(T,i,j) for i=a:a+i, j=c:c+j]
+        H[Block(1), Block(2)] = T[f(T,i,j) for i=a:a+i, j=c+j+1:d]
+        H[Block(2), Block(1)] = T[f(T,i,j) for i=a+i+1:b, j=c:c+j]
+        H[Block(2), Block(2)] = T[f(T,i,j) for i=a+i+1:b, j=c+j+1:d]
+        H
     else
         i = (b-a)÷2
         j = (d-c)÷2
-        C = CauchyMatrix(T, 2, 2)
-        setblock!(C, CauchyMatrix(T, f, a, a+i, c, c+j), 1, 1)
-        setblock!(C, cauchymatrix1(T, f, a, a+i, c+j+1, d), 1, 2)
-        setblock!(C, cauchymatrix2(T, f, a+i+1, b, c, c+j), 2, 1)
-        setblock!(C, CauchyMatrix(T, f, a+i+1, b, c+j+1, d), 2, 2)
-        C
+        H = HierarchicalMatrix(T, 2, 2)
+        H[Block(1), Block(1)] = cauchymatrix(T, f, a, a+i, c, c+j)
+        H[Block(1), Block(2)] = cauchymatrix1(T, f, a, a+i, c+j+1, d)
+        H[Block(2), Block(1)] = cauchymatrix2(T, f, a+i+1, b, c, c+j)
+        H[Block(2), Block(2)] = cauchymatrix(T, f, a+i+1, b, c+j+1, d)
+        H
     end
 end
 
@@ -53,21 +51,21 @@ function cauchymatrix1{T}(::Type{T}, f::Function, a::Int, b::Int, c::Int, d::Int
     if (b-a+1) < BLOCKSIZE && (d-c+1) < BLOCKSIZE
         i = (b-a)÷2
         j = (d-c)÷2
-        C = CauchyMatrix(T, 2, 2)
-        setblock!(C, BarycentricMatrix(T, f, a, a+i, c, c+j), 1, 1)
-        setblock!(C, BarycentricMatrix(T, f, a, a+i, c+j+1, d), 1, 2)
-        setblock!(C, T[f(T,i,j) for i=a+i+1:b, j=c:c+j], 2, 1)
-        setblock!(C, BarycentricMatrix(T, f, a+i+1, b, c+j+1, d), 2, 2)
-        C
+        H = HierarchicalMatrix(T, 2, 2)
+        H[Block(1), Block(1)] = barycentricmatrix(T, f, a, a+i, c, c+j)
+        H[Block(1), Block(2)] = barycentricmatrix(T, f, a, a+i, c+j+1, d)
+        H[Block(2), Block(1)] = T[f(T,i,j) for i=a+i+1:b, j=c:c+j]
+        H[Block(2), Block(2)] = barycentricmatrix(T, f, a+i+1, b, c+j+1, d)
+        H
     else
         i = (b-a)÷2
         j = (d-c)÷2
-        C = CauchyMatrix(T, 2, 2)
-        setblock!(C, BarycentricMatrix(T, f, a, a+i, c, c+j), 1, 1)
-        setblock!(C, BarycentricMatrix(T, f, a, a+i, c+j+1, d), 1, 2)
-        setblock!(C, cauchymatrix1(T, f, a+i+1, b, c, c+j), 2, 1)
-        setblock!(C, BarycentricMatrix(T, f, a+i+1, b, c+j+1, d), 2, 2)
-        C
+        H = HierarchicalMatrix(T, 2, 2)
+        H[Block(1), Block(1)] = barycentricmatrix(T, f, a, a+i, c, c+j)
+        H[Block(1), Block(2)] = barycentricmatrix(T, f, a, a+i, c+j+1, d)
+        H[Block(2), Block(1)] = cauchymatrix1(T, f, a+i+1, b, c, c+j)
+        H[Block(2), Block(2)] = barycentricmatrix(T, f, a+i+1, b, c+j+1, d)
+        H
     end
 end
 
@@ -75,23 +73,24 @@ function cauchymatrix2{T}(::Type{T}, f::Function, a::Int, b::Int, c::Int, d::Int
     if (b-a+1) < BLOCKSIZE && (d-c+1) < BLOCKSIZE
         i = (b-a)÷2
         j = (d-c)÷2
-        C = CauchyMatrix(T, 2, 2)
-        setblock!(C, BarycentricMatrix(T, f, a, a+i, c, c+j), 1, 1)
-        setblock!(C, T[f(T,i,j) for i=a:a+i, j=c+j+1:d], 1, 2)
-        setblock!(C, BarycentricMatrix(T, f, a+i+1, b, c, c+j), 2, 1)
-        setblock!(C, BarycentricMatrix(T, f, a+i+1, b, c+j+1, d), 2, 2)
-        C
+        H = HierarchicalMatrix(T, 2, 2)
+        H[Block(1), Block(1)] = barycentricmatrix(T, f, a, a+i, c, c+j)
+        H[Block(1), Block(2)] = T[f(T,i,j) for i=a:a+i, j=c+j+1:d]
+        H[Block(2), Block(1)] = barycentricmatrix(T, f, a+i+1, b, c, c+j)
+        H[Block(2), Block(2)] = barycentricmatrix(T, f, a+i+1, b, c+j+1, d)
+        H
     else
         i = (b-a)÷2
         j = (d-c)÷2
-        C = CauchyMatrix(T, 2, 2)
-        setblock!(C, BarycentricMatrix(T, f, a, a+i, c, c+j), 1, 1)
-        setblock!(C, cauchymatrix2(T, f, a, a+i, c+j+1, d), 1, 2)
-        setblock!(C, BarycentricMatrix(T, f, a+i+1, b, c, c+j), 2, 1)
-        setblock!(C, BarycentricMatrix(T, f, a+i+1, b, c+j+1, d), 2, 2)
-        C
+        H = HierarchicalMatrix(T, 2, 2)
+        H[Block(1), Block(1)] = barycentricmatrix(T, f, a, a+i, c, c+j)
+        H[Block(1), Block(2)] = cauchymatrix2(T, f, a, a+i, c+j+1, d)
+        H[Block(2), Block(1)] = barycentricmatrix(T, f, a+i+1, b, c, c+j)
+        H[Block(2), Block(2)] = barycentricmatrix(T, f, a+i+1, b, c+j+1, d)
+        H
     end
 end
+
 
 # It is in the large-N asymptotic regime that the hierarchical approach
 # demonstrates quasi-linear scaling, whereas normally we would expect quadratic
@@ -100,8 +99,8 @@ end
 for N in [1000;10_000]
     x = rand(N)
     println("Cauchy matrix construction at N = $N")
-    @time C = CauchyMatrix(Float64, cauchykernel, N, N)
-    @time C = CauchyMatrix(Float64, cauchykernel, N, N)
+    @time C = cauchymatrix(Float64, cauchykernel, N, N)
+    @time C = cauchymatrix(Float64, cauchykernel, N, N)
     @time CF = cauchymatrix(Float64, N)
     @time CF = cauchymatrix(Float64, N)
     println()
