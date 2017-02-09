@@ -196,6 +196,44 @@ function A_mul_B!{T}(u::Vector{T}, B::EvenBarycentricMatrix{T}, v::AbstractVecto
     u
 end
 
+# BarycentricMatrix2D
+
+function A_mul_B!{T}(u::Vector{T}, B::BarycentricMatrix2D{T}, v::AbstractVector{T}, istart::Int, jstart::Int)
+    U, F, V, temp1, temp2 = B.U, B.B.F, B.V, B.temp1, B.temp2
+    ishift, jshift, r = istart-1, jstart-1, length(temp1)
+
+    # temp1 = V'*v[jshift+j]
+
+    for k in 1:r
+        temp1k = zero(T)
+        for j in 1:size(V, 1)
+            temp1k += V[j,k]*v[jshift+j]
+        end
+        temp1[k] = temp1k
+        temp2[k] = zero(T)
+    end
+
+    # temp2 = F*temp1
+
+    for l in 1:r
+        temp1l = temp1[l]
+        for k in 1:r
+            temp2[k] += F[k,l]*temp1l
+        end
+    end
+
+    # u[ishift+i] = U*temp2
+
+    for k in 1:r
+        temp2k = temp2[k]
+        for i in 1:size(U, 1)
+            u[ishift+i] += U[i,k]*temp2k
+        end
+    end
+
+    u
+end
+
 
 
 # C = A*Diagonal(b[jstart:jstart+size(A, 2)-1])

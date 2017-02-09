@@ -1,18 +1,18 @@
 # In this example, we write a simple method to speed up the matrix-vector
 # product of the Cauchy matrix:
 #
-# 1/(i-j+0.5), for 1 ≤ i,j ≤ N
+# 1/(x_i-y_j), for 1 ≤ i,j ≤ N
 #
 # and a vector:
 
 function cauchykernel{T}(::Type{T}, x, y)
-    T(inv(x-y+T(0.5)))
+    T(inv(x-y))
 end
 
-function cauchymatrix{T}(::Type{T}, N::Int)
-    ret = zeros(T, N, N)
-    for j in 1:N, i in 1:N
-        ret[i,j] = cauchykernel(T,i,j)
+function cauchymatrix{T}(::Type{T}, x::Vector{T}, y::Vector{T})
+    ret = zeros(T, length(x), length(y))
+    for j in 1:length(y), i in 1:length(x)
+        ret[i,j] = cauchykernel(T,x[i],y[j])
     end
     ret
 end
@@ -23,94 +23,220 @@ end
 
 using HierarchicalMatrices
 
-cauchymatrix{T}(::Type{T}, f::Function, b::Int, d::Int) = cauchymatrix(T, f, 1, b, 1, d)
+import HierarchicalMatrices: chebyshevpoints, half, two, update!
 
-function cauchymatrix{T}(::Type{T}, f::Function, a::Int, b::Int, c::Int, d::Int)
-    if (b-a+1) < BLOCKSIZE && (d-c+1) < BLOCKSIZE
-        i = (b-a)÷2
-        j = (d-c)÷2
-        H = HierarchicalMatrix(T, 2, 2)
-        H[Block(1), Block(1)] = T[f(T,i,j) for i=a:a+i, j=c:c+j]
-        H[Block(1), Block(2)] = T[f(T,i,j) for i=a:a+i, j=c+j+1:d]
-        H[Block(2), Block(1)] = T[f(T,i,j) for i=a+i+1:b, j=c:c+j]
-        H[Block(2), Block(2)] = T[f(T,i,j) for i=a+i+1:b, j=c+j+1:d]
+@hierarchical CauchyMatrix BarycentricMatrix2D Matrix
+
+
+x = chebyshevpoints(Float64, 200);
+y = chebyshevpoints(Float64, 200);
+
+B = BarycentricMatrix2D(Float64, cauchykernel, -1.0, -0.5, 0.5, 1.0, x, y, 134:200, 1:67)
+
+norm(vec(B - Float64[cauchykernel(Float64, B.x[i], B.y[j]) for i in B.ir, j in B.jr]), Inf)
+
+x .+= 1e-3rand(length(x))
+y .+= 1e-3rand(length(y))
+
+update!(B, x, y, B.ir, B.jr)
+
+norm(vec(B - Float64[cauchykernel(Float64, B.x[i], B.y[j]) for i in B.ir, j in B.jr]), Inf)
+
+
+import Base: scale!, Matrix, promote_op
+import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==, !=
+import Base.LinAlg: checksquare, SingularException, arithtype, Factorization
+
+function (*){T,S}(H::AbstractCauchyMatrix{T}, x::AbstractVector{S})
+    TS = promote_op(*, arithtype(T), arithtype(S))
+    A_mul_B!(zeros(TS, size(H, 1)), H, x)
+end
+
+Base.A_mul_B!(u::Vector, H::AbstractCauchyMatrix, v::AbstractVector) = A_mul_B!(u, H, v, 1, 1)
+
+function Base.getindex(H::CauchyMatrix, i::Int, j::Int)
+    p, q = size(H)
+    M, N = blocksize(H)
+
+    m = 1
+    while m ≤ M
+        r = blocksize(H, m, N, 1)
+        if i > r
+            i -= r
+            m += 1
+        else
+            break
+        end
+    end
+
+    n = 1
+    while n ≤ N
+        s = blocksize(H, 1, n, 2)
+        if j > s
+            j -= s
+            n += 1
+        else
+            break
+        end
+    end
+
+    blockgetindex(H, m, n, i, j)
+end
+
+@generated function Base.A_mul_B!(u::Vector, H::CauchyMatrix, v::AbstractVector, istart::Int, jstart::Int)
+    L = length(fieldnames(H))-1
+    T = fieldname(H, 1)
+    str = "
+    begin
+        M, N = blocksize(H)
+        p = 0
+        for m = 1:M
+            q = 0
+            for n = 1:N
+                Hmn = H.assigned[m,n]
+                if Hmn == 1
+                    A_mul_B!(u, getindex(H.$T, m, n), v, istart + p, jstart + q)"
+    for l in 2:L
+        T = fieldname(H, l)
+        str *= "
+                elseif Hmn == $l
+                    A_mul_B!(u, getindex(H.$T, m, n), v, istart + p, jstart + q)"
+    end
+    str *= "
+                end
+                q += blocksize(H, 1, n, 2)
+            end
+            p += blocksize(H, m, N, 1)
+        end
+        return u
+    end"
+    return parse(str)
+end
+
+CauchyMatrix{T}(x::Vector{T}, y::Vector{T}, a::T, b::T, c::T, d::T) = CauchyMatrix(x, y, 1:length(x), 1:length(y), a, b, c, d)
+
+function CauchyMatrix{T}(x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int}, a::T, b::T, c::T, d::T)
+    ir1, ir2 = indsplit(x, ir, a, b)
+    jr1, jr2 = indsplit(y, jr, c, d)
+    ab2 = half(T)*(a+b)
+    cd2 = half(T)*(c+d)
+
+    if length(ir1) < BLOCKSIZE && length(ir2) < BLOCKSIZE && length(jr1) < BLOCKSIZE && length(jr2) < BLOCKSIZE
+        H = CauchyMatrix(T, 2, 2)
+        H[Block(1), Block(1)] = T[cauchykernel(T,x[i],y[j]) for i in ir1, j in jr1]
+        H[Block(1), Block(2)] = T[cauchykernel(T,x[i],y[j]) for i in ir1, j in jr2]
+        H[Block(2), Block(1)] = T[cauchykernel(T,x[i],y[j]) for i in ir2, j in jr1]
+        H[Block(2), Block(2)] = T[cauchykernel(T,x[i],y[j]) for i in ir2, j in jr2]
         H
     else
-        i = (b-a)÷2
-        j = (d-c)÷2
-        H = HierarchicalMatrix(T, 2, 2)
-        H[Block(1), Block(1)] = cauchymatrix(T, f, a, a+i, c, c+j)
-        H[Block(1), Block(2)] = cauchymatrix1(T, f, a, a+i, c+j+1, d)
-        H[Block(2), Block(1)] = cauchymatrix2(T, f, a+i+1, b, c, c+j)
-        H[Block(2), Block(2)] = cauchymatrix(T, f, a+i+1, b, c+j+1, d)
+        H = CauchyMatrix(T, 2, 2)
+        H[Block(1), Block(1)] = CauchyMatrix(x, y, ir1, jr1, a, ab2, c, cd2)
+        H[Block(1), Block(2)] = CauchyMatrix1(x, y, ir1, jr2, a, ab2, cd2, d)
+        H[Block(2), Block(1)] = CauchyMatrix2(x, y, ir2, jr1, ab2, b, c, cd2)
+        H[Block(2), Block(2)] = CauchyMatrix(x, y, ir2, jr2, ab2, b, cd2, d)
         H
     end
 end
 
-function cauchymatrix1{T}(::Type{T}, f::Function, a::Int, b::Int, c::Int, d::Int)
-    if (b-a+1) < BLOCKSIZE && (d-c+1) < BLOCKSIZE
-        i = (b-a)÷2
-        j = (d-c)÷2
-        H = HierarchicalMatrix(T, 2, 2)
-        H[Block(1), Block(1)] = barycentricmatrix(T, f, a, a+i, c, c+j)
-        H[Block(1), Block(2)] = barycentricmatrix(T, f, a, a+i, c+j+1, d)
-        H[Block(2), Block(1)] = T[f(T,i,j) for i=a+i+1:b, j=c:c+j]
-        H[Block(2), Block(2)] = barycentricmatrix(T, f, a+i+1, b, c+j+1, d)
+function CauchyMatrix1{T}(x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int}, a::T, b::T, c::T, d::T)
+    ir1, ir2 = indsplit(x, ir, a, b)
+    jr1, jr2 = indsplit(y, jr, c, d)
+    ab2 = half(T)*(a+b)
+    cd2 = half(T)*(c+d)
+
+    if length(ir1) < BLOCKSIZE && length(ir2) < BLOCKSIZE && length(jr1) < BLOCKSIZE && length(jr2) < BLOCKSIZE
+        H = CauchyMatrix(T, 2, 2)
+        H[Block(1), Block(1)] = BarycentricMatrix2D(T, cauchykernel, a, ab2, c, cd2, x, y, ir1, jr1)
+        H[Block(1), Block(2)] = BarycentricMatrix2D(T, cauchykernel, a, ab2, cd2, d, x, y, ir1, jr2)
+        H[Block(2), Block(1)] = T[cauchykernel(T,x[i],y[j]) for i in ir2, j in jr1]
+        H[Block(2), Block(2)] = BarycentricMatrix2D(T, cauchykernel, ab2, b, cd2, d, x, y, ir2, jr2)
         H
     else
-        i = (b-a)÷2
-        j = (d-c)÷2
-        H = HierarchicalMatrix(T, 2, 2)
-        H[Block(1), Block(1)] = barycentricmatrix(T, f, a, a+i, c, c+j)
-        H[Block(1), Block(2)] = barycentricmatrix(T, f, a, a+i, c+j+1, d)
-        H[Block(2), Block(1)] = cauchymatrix1(T, f, a+i+1, b, c, c+j)
-        H[Block(2), Block(2)] = barycentricmatrix(T, f, a+i+1, b, c+j+1, d)
+        H = CauchyMatrix(T, 2, 2)
+        H[Block(1), Block(1)] = BarycentricMatrix2D(T, cauchykernel, a, ab2, c, cd2, x, y, ir1, jr1)
+        H[Block(1), Block(2)] = BarycentricMatrix2D(T, cauchykernel, a, ab2, cd2, d, x, y, ir1, jr2)
+        H[Block(2), Block(1)] = CauchyMatrix1(x, y, ir2, jr1, ab2, b, c, cd2)
+        H[Block(2), Block(2)] = BarycentricMatrix2D(T, cauchykernel, ab2, b, cd2, d, x, y, ir2, jr2)
         H
     end
 end
 
-function cauchymatrix2{T}(::Type{T}, f::Function, a::Int, b::Int, c::Int, d::Int)
-    if (b-a+1) < BLOCKSIZE && (d-c+1) < BLOCKSIZE
-        i = (b-a)÷2
-        j = (d-c)÷2
-        H = HierarchicalMatrix(T, 2, 2)
-        H[Block(1), Block(1)] = barycentricmatrix(T, f, a, a+i, c, c+j)
-        H[Block(1), Block(2)] = T[f(T,i,j) for i=a:a+i, j=c+j+1:d]
-        H[Block(2), Block(1)] = barycentricmatrix(T, f, a+i+1, b, c, c+j)
-        H[Block(2), Block(2)] = barycentricmatrix(T, f, a+i+1, b, c+j+1, d)
+function CauchyMatrix2{T}(x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int}, a::T, b::T, c::T, d::T)
+    ir1, ir2 = indsplit(x, ir, a, b)
+    jr1, jr2 = indsplit(y, jr, c, d)
+    ab2 = half(T)*(a+b)
+    cd2 = half(T)*(c+d)
+
+    if length(ir1) < BLOCKSIZE && length(ir2) < BLOCKSIZE && length(jr1) < BLOCKSIZE && length(jr2) < BLOCKSIZE
+        H = CauchyMatrix(T, 2, 2)
+        H[Block(1), Block(1)] = BarycentricMatrix2D(T, cauchykernel, a, ab2, c, cd2, x, y, ir1, jr1)
+        H[Block(1), Block(2)] = T[cauchykernel(T,x[i],y[j]) for i in ir1, j in jr2]
+        H[Block(2), Block(1)] = BarycentricMatrix2D(T, cauchykernel, ab2, b, c, cd2, x, y, ir2, jr1)
+        H[Block(2), Block(2)] = BarycentricMatrix2D(T, cauchykernel, ab2, b, cd2, d, x, y, ir2, jr2)
         H
     else
-        i = (b-a)÷2
-        j = (d-c)÷2
-        H = HierarchicalMatrix(T, 2, 2)
-        H[Block(1), Block(1)] = barycentricmatrix(T, f, a, a+i, c, c+j)
-        H[Block(1), Block(2)] = cauchymatrix2(T, f, a, a+i, c+j+1, d)
-        H[Block(2), Block(1)] = barycentricmatrix(T, f, a+i+1, b, c, c+j)
-        H[Block(2), Block(2)] = barycentricmatrix(T, f, a+i+1, b, c+j+1, d)
+        H = CauchyMatrix(T, 2, 2)
+        H[Block(1), Block(1)] = BarycentricMatrix2D(T, cauchykernel, a, ab2, c, cd2, x, y, ir1, jr1)
+        H[Block(1), Block(2)] = CauchyMatrix2(x, y, ir1, jr2, a, ab2, cd2, d)
+        H[Block(2), Block(1)] = BarycentricMatrix2D(T, cauchykernel, ab2, b, c, cd2, x, y, ir2, jr1)
+        H[Block(2), Block(2)] = BarycentricMatrix2D(T, cauchykernel, ab2, b, cd2, d, x, y, ir2, jr2)
         H
     end
 end
 
+
+function update!{T}(::Type{T}, f::Function, A::Matrix{T}, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int})
+    ishift = 1-first(ir)
+    jshift = 1-first(jr)
+    @assert size(A) == (length(ir), length(jr))
+
+    for j in jr, i in ir
+        A[i+ishift,j+jshift] = f(T,x[i],y[j])
+    end
+
+    A
+end
+
+@generated function update!{T}(::Type{T}, f::Function, H::CauchyMatrix{T}, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int})
+    ishift = 1-first(ir)
+    jshift = 1-first(jr)
+
+    for j in jr, i in ir
+        A[i+ishift,j+jshift] = f(T,x[i],y[j])
+    end
+
+    A
+end
 
 # It is in the large-N asymptotic regime that the hierarchical approach
 # demonstrates quasi-linear scaling, whereas normally we would expect quadratic
 # scaling (beyond the BLAS'ed sub-sizes).
 
 for N in [1000;10_000]
-    x = rand(N)
+    b = rand(N)
+    x = chebyshevpoints(Float64, N)
+    y = chebyshevpoints(Float64, N; kind = 2)
     println("Cauchy matrix construction at N = $N")
-    @time C = cauchymatrix(Float64, cauchykernel, N, N)
-    @time C = cauchymatrix(Float64, cauchykernel, N, N)
-    @time CF = cauchymatrix(Float64, N)
-    @time CF = cauchymatrix(Float64, N)
+    @time C = CauchyMatrix(x, y, 1.0, -1.0, 1.0, -1.0)
+    @time C = CauchyMatrix(x, y, 1.0, -1.0, 1.0, -1.0)
+    @time CF = cauchymatrix(Float64, x, y)
+    @time CF = cauchymatrix(Float64, x, y)
     println()
     println("Cauchy matrix-vector multiplication at N = $N")
-    @time C*x
-    @time C*x
-    @time CF*x
-    @time CF*x
+    @time C*b
+    @time C*b
+    @time CF*b
+    @time CF*b
     println()
-    println("Relative error: ",norm(C*x - CF*x)/norm(C*x))
+    println("Relative error: ",norm(C*b - CF*b)/norm(C*b))
     println()
     println()
 end
+
+#=
+N = 10000
+x = chebyshevpoints(Float64, N)
+y = chebyshevpoints(Float64, N; kind = 2)
+C = CauchyMatrix(x, y, 1.0, -1.0, 1.0, -1.0)
+CF = cauchymatrix(Float64, x, y)
+=#

@@ -12,9 +12,23 @@ module HierarchicalMatrices
 
     export BLOCKSIZE, Block
     export AbstractLowRankMatrix, AbstractBarycentricMatrix
-    export LowRankMatrix, barycentricmatrix, EvenBarycentricMatrix
-    export @hierarchical, blocksize, blockgetindex
-    export add_col, add_col!, lrzeros
+    export LowRankMatrix, BarycentricMatrix2D, EvenBarycentricMatrix
+    export @hierarchical, barycentricmatrix, blocksize, blockgetindex
+    export add_col, add_col!, lrzeros, indsplit
+
+    """
+    Compute a typed 0.5.
+    """
+    half(x::Number) = oftype(x,0.5)
+    half(x::Integer) = half(float(x))
+    half{T<:Number}(::Type{T}) = convert(T,0.5)
+    half{T<:Integer}(::Type{T}) = half(AbstractFloat)
+
+    """
+    Compute a typed 2.
+    """
+    two(x::Number) = oftype(x,2)
+    two{T<:Number}(::Type{T}) = convert(T,2)
 
     include("LowRankMatrix.jl")
     include("BarycentricMatrix.jl")
