@@ -45,10 +45,10 @@ norm(vec(B - Float64[cauchykernel(Float64, B.x[i], B.y[j]) for i in B.ir, j in B
 
 import Base: scale!, Matrix, promote_op
 import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==, !=
-import Base.LinAlg: checksquare, SingularException, arithtype, Factorization
+import Base.LinAlg: checksquare, SingularException, matprod, Factorization
 
 function (*){T,S}(H::AbstractCauchyMatrix{T}, x::AbstractVector{S})
-    TS = promote_op(*, arithtype(T), arithtype(S))
+    TS = promote_op(matprod, T, S)
     A_mul_B!(zeros(TS, size(H, 1)), H, x)
 end
 
@@ -83,7 +83,7 @@ function Base.getindex(H::CauchyMatrix, i::Int, j::Int)
     blockgetindex(H, m, n, i, j)
 end
 
-@generated function Base.A_mul_B!(u::Vector, H::CauchyMatrix, v::AbstractVector, istart::Int, jstart::Int)
+@generated function Base.A_mul_B!{S}(u::Vector{S}, H::CauchyMatrix{S}, v::AbstractVector{S}, istart::Int, jstart::Int)
     L = length(fieldnames(H))-1
     T = fieldname(H, 1)
     str = "

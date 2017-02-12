@@ -43,7 +43,7 @@ macro hierarchical(HierarchicalType, Types...)
         @generated function $HierarchicalType{T}(::Type{T}, M::Int, N::Int)
             L = length(fieldnames($HierarchicalType))
             HM = $HierarchicalType
-            str = "$HM(Matrix{$HM}(M, N), "
+            str = "$HM(Matrix{$HM{T}}(M, N), "
             for l in 2:L-1
                 S = $Types[l-1]
                 str *= "Matrix{$S{T}}(M, N), "
