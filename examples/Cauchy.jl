@@ -121,7 +121,7 @@ function CauchyMatrix{T}(x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::Uni
     ab2 = half(T)*(a+b)
     cd2 = half(T)*(c+d)
 
-    if length(ir1) < BLOCKSIZE && length(ir2) < BLOCKSIZE && length(jr1) < BLOCKSIZE && length(jr2) < BLOCKSIZE
+    if length(ir1) < BLOCKSIZE(T) && length(ir2) < BLOCKSIZE(T) && length(jr1) < BLOCKSIZE(T) && length(jr2) < BLOCKSIZE(T)
         H = CauchyMatrix(T, 2, 2)
         H[Block(1), Block(1)] = T[cauchykernel(T,x[i],y[j]) for i in ir1, j in jr1]
         H[Block(1), Block(2)] = T[cauchykernel(T,x[i],y[j]) for i in ir1, j in jr2]
@@ -144,7 +144,7 @@ function CauchyMatrix1{T}(x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::Un
     ab2 = half(T)*(a+b)
     cd2 = half(T)*(c+d)
 
-    if length(ir1) < BLOCKSIZE && length(ir2) < BLOCKSIZE && length(jr1) < BLOCKSIZE && length(jr2) < BLOCKSIZE
+    if length(ir1) < BLOCKSIZE(T) && length(ir2) < BLOCKSIZE(T) && length(jr1) < BLOCKSIZE(T) && length(jr2) < BLOCKSIZE(T)
         H = CauchyMatrix(T, 2, 2)
         H[Block(1), Block(1)] = BarycentricMatrix2D(T, cauchykernel, a, ab2, c, cd2, x, y, ir1, jr1)
         H[Block(1), Block(2)] = BarycentricMatrix2D(T, cauchykernel, a, ab2, cd2, d, x, y, ir1, jr2)
@@ -167,7 +167,7 @@ function CauchyMatrix2{T}(x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::Un
     ab2 = half(T)*(a+b)
     cd2 = half(T)*(c+d)
 
-    if length(ir1) < BLOCKSIZE && length(ir2) < BLOCKSIZE && length(jr1) < BLOCKSIZE && length(jr2) < BLOCKSIZE
+    if length(ir1) < BLOCKSIZE(T) && length(ir2) < BLOCKSIZE(T) && length(jr1) < BLOCKSIZE(T) && length(jr2) < BLOCKSIZE(T)
         H = CauchyMatrix(T, 2, 2)
         H[Block(1), Block(1)] = BarycentricMatrix2D(T, cauchykernel, a, ab2, c, cd2, x, y, ir1, jr1)
         H[Block(1), Block(2)] = T[cauchykernel(T,x[i],y[j]) for i in ir1, j in jr2]

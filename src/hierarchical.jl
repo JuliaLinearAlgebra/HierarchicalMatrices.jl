@@ -15,7 +15,7 @@ macro hierarchical(HierarchicalType, Types...)
 
         export $AbstractHierarchicalType, $HierarchicalType, $Factorization
 
-        abstract $AbstractHierarchicalType{T} <: AbstractSuperType{T}
+        abstract type $AbstractHierarchicalType{T} <: AbstractSuperType{T} end
 
         blocksize(H::$AbstractHierarchicalType) = size(H.assigned)
 

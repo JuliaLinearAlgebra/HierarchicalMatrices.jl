@@ -1,7 +1,7 @@
 @hierarchical HierarchicalMatrix LowRankMatrix Matrix
 
 function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractVector{S})
-    TS = promote_op(*, arithtype(T), arithtype(S))
+    TS = promote_op(matprod, T, S)
     A_mul_B!(zeros(TS, size(H, 1)), H, x)
 end
 

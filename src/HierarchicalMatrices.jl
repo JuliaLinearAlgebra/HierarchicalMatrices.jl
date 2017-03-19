@@ -1,16 +1,17 @@
 __precompile__()
 module HierarchicalMatrices
-    const BLOCKSIZE = 200
+    BLOCKSIZE(T) = round(Int, 4log(3+sqrt(T(8)), inv(eps(T))))
+    BLOCKRANK(T) = round(Int, log(3+sqrt(T(8)), inv(eps(T))))
 
     import Base: size, rank, norm, cond, istriu, istril, issymmetric, ishermitian, convert, view
     import Base: copy, getindex, setindex!, show, transpose, ctranspose, one, zero, inv, A_mul_B!
     import Base: scale!, Matrix, promote_op
     import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==, !=
-    import Base.LinAlg: checksquare, SingularException, arithtype, Factorization
+    import Base.LinAlg: checksquare, SingularException, matprod, Factorization
     import Base.LinAlg: BlasInt, BlasFloat, BlasReal, BlasComplex
     import Base.BLAS: @blasfunc, libblas
 
-    export BLOCKSIZE, Block
+    export BLOCKSIZE, BLOCKRANK, Block
     export AbstractLowRankMatrix, AbstractBarycentricMatrix
     export LowRankMatrix, BarycentricMatrix2D, EvenBarycentricMatrix
     export @hierarchical, barycentricmatrix, blocksize, blockgetindex

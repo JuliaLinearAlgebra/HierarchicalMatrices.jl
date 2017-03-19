@@ -1,4 +1,4 @@
-abstract AbstractBarycentricMatrix{T} <: AbstractLowRankMatrix{T}
+abstract type AbstractBarycentricMatrix{T} <: AbstractLowRankMatrix{T} end
 
 size(B::AbstractBarycentricMatrix) = (B.b-B.a+1, B.d-B.c+1)
 
@@ -19,7 +19,7 @@ for BMAT in (:EvenBarycentricMatrix,)
         end
 
         function $BMAT{T}(::Type{T}, f::Function, a::Int64, b::Int64, c::Int64, d::Int64)
-            n = 18
+            n = BLOCKRANK(T)
             x = chebyshevpoints(T, n)
             λ = chebyshevbarycentricweights(T, n)
 
@@ -65,7 +65,7 @@ end
 
 
 function barycentricmatrix{T}(::Type{T}, f::Function, a::Int64, b::Int64, c::Int64, d::Int64)
-    n = 18
+    n = BLOCKRANK(T)
     x = chebyshevpoints(T, n)
     λ = chebyshevbarycentricweights(T, n)
 
@@ -151,7 +151,7 @@ immutable BarycentricPoly2D{T}
 end
 
 function BarycentricPoly2D{T}(::Type{T}, f::Function, a::T, b::T, c::T, d::T)
-    r = ceil(Int, log(5, inv(eps(T))))#18
+    r = BLOCKRANK(T)
     rx = r
     ry = r
     x = chebyshevpoints(T, rx)
