@@ -8,6 +8,7 @@ macro hierarchical(HierarchicalType, Types...)
     Factorization = parse(string(HierarchicalType)*"Factorization")
     return esc(quote
         import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==
+        import Compat
 
         import HierarchicalMatrices: add_col!
 
@@ -15,7 +16,7 @@ macro hierarchical(HierarchicalType, Types...)
 
         export $AbstractHierarchicalType, $HierarchicalType, $Factorization
 
-        abstract type $AbstractHierarchicalType{T} <: AbstractSuperType{T} end
+        Compat.@compat abstract type $AbstractHierarchicalType{T} <: AbstractSuperType{T} end
 
         blocksize(H::$AbstractHierarchicalType) = size(H.assigned)
 
@@ -43,7 +44,7 @@ macro hierarchical(HierarchicalType, Types...)
         @generated function $HierarchicalType{T}(::Type{T}, M::Int, N::Int)
             L = length(fieldnames($HierarchicalType))
             HM = $HierarchicalType
-            str = "$HM(Matrix{$HM{T}}(M, N), "
+            str = VERSION < v"0.6-" ? "$HM(Matrix{$HM}(M, N), " : "$HM(Matrix{$HM{T}}(M, N), "
             for l in 2:L-1
                 S = $Types[l-1]
                 str *= "Matrix{$S{T}}(M, N), "

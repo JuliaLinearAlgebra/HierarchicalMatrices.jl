@@ -1,8 +1,17 @@
 @hierarchical HierarchicalMatrix LowRankMatrix Matrix
 
-function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractVector{S})
-    TS = promote_op(matprod, T, S)
-    A_mul_B!(zeros(TS, size(H, 1)), H, x)
+if VERSION < v"0.6-"
+    import Base.LinAlg: arithtype
+    function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractVector{S})
+        TS = promote_op(*, arithtype(T), arithtype(S))
+        A_mul_B!(zeros(TS, size(H, 1)), H, x)
+    end
+else
+    import Base.LinAlg: matprod
+    function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractVector{S})
+        TS = promote_op(matprod, T, S)
+        A_mul_B!(zeros(TS, size(H, 1)), H, x)
+    end
 end
 
 Base.A_mul_B!(u::Vector, H::AbstractHierarchicalMatrix, v::AbstractVector) = A_mul_B!(u, H, v, 1, 1)

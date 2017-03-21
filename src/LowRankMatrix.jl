@@ -1,4 +1,4 @@
-abstract type AbstractLowRankMatrix{T} <: AbstractMatrix{T} end
+@compat abstract type AbstractLowRankMatrix{T} <: AbstractMatrix{T} end
 
 """
 Store the singular value decomposition of a matrix:
@@ -126,6 +126,12 @@ end
 (*){T<:Number}(B::T, L::LowRankMatrix{T}) = LowRankMatrix(L.U, B*L.Σ, L.V)
 (*){T<:Number}(L::LowRankMatrix{T}, B::T) = LowRankMatrix(L.U, L.Σ*B, L.V)
 (/){T<:Number}(L::LowRankMatrix{T}, B::T) = LowRankMatrix(L.U, L.Σ/B, L.V)
-(.*){T<:Number}(B::T, L::LowRankMatrix{T}) = LowRankMatrix(L.U, B.*L.Σ, L.V)
-(.*){T<:Number}(L::LowRankMatrix{T}, B::T) = LowRankMatrix(L.U, L.Σ.*B, L.V)
-(./){T<:Number}(L::LowRankMatrix{T}, B::T) = LowRankMatrix(L.U, L.Σ./B, L.V)
+function broadcast{T}(::typeof(*), B::T, L::LowRankMatrix{T})
+    LowRankMatrix(L.U, B.*L.Σ, L.V)
+end
+function broadcast{T}(::typeof(*), L::LowRankMatrix{T}, B::T)
+    LowRankMatrix(L.U, L.Σ.*B, L.V)
+end
+function broadcast{T}(::typeof(/), L::LowRankMatrix{T}, B::T)
+    LowRankMatrix(L.U, L.Σ./B, L.V)
+end

@@ -45,11 +45,20 @@ norm(vec(B - Float64[cauchykernel(Float64, B.x[i], B.y[j]) for i in B.ir, j in B
 
 import Base: scale!, Matrix, promote_op
 import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==, !=
-import Base.LinAlg: checksquare, SingularException, matprod, Factorization
+import Base.LinAlg: checksquare, SingularException, Factorization
 
-function (*){T,S}(H::AbstractCauchyMatrix{T}, x::AbstractVector{S})
-    TS = promote_op(matprod, T, S)
-    A_mul_B!(zeros(TS, size(H, 1)), H, x)
+if VERSION < v"0.6-"
+    import Base.LinAlg: arithtype
+    function (*){T,S}(H::AbstractCauchyMatrix{T}, x::AbstractVector{S})
+        TS = promote_op(*, arithtype(T), arithtype(S))
+        A_mul_B!(zeros(TS, size(H, 1)), H, x)
+    end
+else
+    import Base.LinAlg: matprod
+    function (*){T,S}(H::AbstractCauchyMatrix{T}, x::AbstractVector{S})
+        TS = promote_op(matprod, T, S)
+        A_mul_B!(zeros(TS, size(H, 1)), H, x)
+    end
 end
 
 Base.A_mul_B!(u::Vector, H::AbstractCauchyMatrix, v::AbstractVector) = A_mul_B!(u, H, v, 1, 1)
@@ -232,11 +241,3 @@ for N in [1000;10_000]
     println()
     println()
 end
-
-#=
-N = 10000
-x = chebyshevpoints(Float64, N)
-y = chebyshevpoints(Float64, N; kind = 2)
-C = CauchyMatrix(x, y, 1.0, -1.0, 1.0, -1.0)
-CF = cauchymatrix(Float64, x, y)
-=#

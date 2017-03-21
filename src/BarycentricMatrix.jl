@@ -1,4 +1,4 @@
-abstract type AbstractBarycentricMatrix{T} <: AbstractLowRankMatrix{T} end
+@compat abstract type AbstractBarycentricMatrix{T} <: AbstractLowRankMatrix{T} end
 
 size(B::AbstractBarycentricMatrix) = (B.b-B.a+1, B.d-B.c+1)
 

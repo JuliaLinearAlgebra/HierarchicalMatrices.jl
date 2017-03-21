@@ -234,6 +234,40 @@ function A_mul_B!{T}(u::Vector{T}, B::BarycentricMatrix2D{T}, v::AbstractVector{
     u
 end
 
+# BLAS'ed
+for (fname, elty) in ((:dgemv_,:Float64),
+                      (:sgemv_,:Float32),
+                      (:zgemv_,:Complex128),
+                      (:cgemv_,:Complex64))
+    @eval begin
+        function A_mul_B!(u::Vector{$elty}, B::BarycentricMatrix2D{$elty}, v::Vector{$elty}, istart::Int, jstart::Int)
+            fill!(B.temp1, zero($elty))
+            ccall((@blasfunc($fname), libblas), Void,
+                (Ptr{UInt8}, Ptr{BlasInt}, Ptr{BlasInt}, Ptr{$elty},
+                 Ptr{$elty}, Ptr{BlasInt}, Ptr{$elty}, Ptr{BlasInt},
+                 Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}),
+                 &'T', &size(B.V,1), &size(B.V,2), &$elty(1.0),
+                 B.V, &max(1,stride(B.V,2)), pointer(v, jstart), &1,
+                 &$elty(1.0), B.temp1, &1)
+            fill!(B.temp2, zero($elty))
+            ccall((@blasfunc($fname), libblas), Void,
+                (Ptr{UInt8}, Ptr{BlasInt}, Ptr{BlasInt}, Ptr{$elty},
+                 Ptr{$elty}, Ptr{BlasInt}, Ptr{$elty}, Ptr{BlasInt},
+                 Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}),
+                 &'N', &size(B.B.F,1), &size(B.B.F,2), &$elty(1.0),
+                 B.B.F, &max(1,stride(B.B.F,2)), B.temp1, &1,
+                 &$elty(1.0), B.temp2, &1)
+            ccall((@blasfunc($fname), libblas), Void,
+                (Ptr{UInt8}, Ptr{BlasInt}, Ptr{BlasInt}, Ptr{$elty},
+                 Ptr{$elty}, Ptr{BlasInt}, Ptr{$elty}, Ptr{BlasInt},
+                 Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}),
+                 &'N', &size(B.U,1), &size(B.U,2), &$elty(1.0),
+                 B.U, &max(1,stride(B.U,2)), B.temp2, &1,
+                 &$elty(1.0), pointer(u, istart), &1)
+             u
+        end
+    end
+end
 
 
 # C = A*Diagonal(b[jstart:jstart+size(A, 2)-1])

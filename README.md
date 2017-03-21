@@ -1,5 +1,7 @@
 # HierarchicalMatrices.jl
 
+[![Build Status](https://travis-ci.org/MikaelSlevinsky/HierarchicalMatrices.jl.svg?branch=master)](https://travis-ci.org/MikaelSlevinsky/HierarchicalMatrices.jl)
+
 This package provides a flexible framework for hierarchical data types in Julia.
 
 Create your own hierarchical matrix as simply as:
