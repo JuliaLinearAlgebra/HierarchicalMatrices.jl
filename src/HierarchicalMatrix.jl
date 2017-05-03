@@ -2,19 +2,20 @@
 
 if VERSION < v"0.6-"
     import Base.LinAlg: arithtype
-    function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractVector{S})
+    function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractVecOrMat{S})
         TS = promote_op(*, arithtype(T), arithtype(S))
         A_mul_B!(zeros(TS, size(H, 1)), H, x)
     end
 else
     import Base.LinAlg: matprod
-    function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractVector{S})
+    function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractVecOrMat{S})
         TS = promote_op(matprod, T, S)
         A_mul_B!(zeros(TS, size(H, 1)), H, x)
     end
 end
 
-Base.A_mul_B!(u::Vector, H::AbstractHierarchicalMatrix, v::AbstractVector) = A_mul_B!(u, H, v, 1, 1)
+Base.A_mul_B!(y::AbstractVecOrMat, H::AbstractHierarchicalMatrix, x::AbstractVecOrMat) = A_mul_B!(y, H, x, 1, 1)
+Base.A_mul_B!(y::AbstractVecOrMat, H::AbstractHierarchicalMatrix, x::AbstractVecOrMat, istart::Int, jstart::Int) = A_mul_B!(y, H, x, istart, jstart, 1, 1)
 
 Base.scale!(H::AbstractHierarchicalMatrix, b::AbstractVector) = scale!(H, b, 1)
 Base.scale!(b::AbstractVector, H::AbstractHierarchicalMatrix) = scale!(b, H, 1)
@@ -50,7 +51,7 @@ function Base.getindex(H::HierarchicalMatrix, i::Int, j::Int)
     blockgetindex(H, m, n, i, j)
 end
 
-@generated function Base.A_mul_B!(u::Vector, H::HierarchicalMatrix, v::AbstractVector, istart::Int, jstart::Int)
+@generated function Base.A_mul_B!(y::AbstractVecOrMat, H::HierarchicalMatrix, x::AbstractVecOrMat, istart::Int, jstart::Int, INCX::Int, INCY::Int)
     L = length(fieldnames(H))-1
     T = fieldname(H, 1)
     str = "
@@ -62,20 +63,20 @@ end
             for n = 1:N
                 Hmn = H.assigned[m,n]
                 if Hmn == 1
-                    A_mul_B!(u, getindex(H.$T, m, n), v, istart + p, jstart + q)"
+                    A_mul_B!(y, getindex(H.$T, m, n), x, istart + p, jstart + q, INCX, INCY)"
     for l in 2:L
         T = fieldname(H, l)
         str *= "
                 elseif Hmn == $l
-                    A_mul_B!(u, getindex(H.$T, m, n), v, istart + p, jstart + q)"
+                    A_mul_B!(y, getindex(H.$T, m, n), x, istart + p, jstart + q, INCX, INCY)"
     end
     str *= "
                 end
-                q += blocksize(H, 1, n, 2)
+                q += INCX*blocksize(H, 1, n, 2)
             end
-            p += blocksize(H, m, N, 1)
+            p += INCY*blocksize(H, m, N, 1)
         end
-        return u
+        return y
     end"
     return parse(str)
 end

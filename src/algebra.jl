@@ -31,17 +31,19 @@ end
 
 # Generic Matrix
 
-function A_mul_B!{T}(u::Vector{T}, A::AbstractMatrix{T}, v::AbstractVector{T}, istart::Int, jstart::Int)
+A_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) = A_mul_B!(y, A, x, istart, jstart, 1, 1)
+
+function A_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
     m, n = size(A)
-    ishift, jshift = istart-1, jstart-1
+    ishift, jshift = istart-INCY, jstart-INCX
     @inbounds for j = 1:n
-        vj = v[jshift+j]
+        xj = x[jshift+j*INCX]
         for i = 1:m
-            u[ishift+i] += A[i,j]*vj
+            y[ishift+i*INCY] += A[i,j]*xj
         end
     end
 
-    u
+    y
 end
 
 # BLAS'ed
@@ -50,32 +52,33 @@ for (fname, elty) in ((:dgemv_,:Float64),
                       (:zgemv_,:Complex128),
                       (:cgemv_,:Complex64))
     @eval begin
-        function A_mul_B!(u::Vector{$elty}, A::Matrix{$elty}, v::Vector{$elty}, istart::Int, jstart::Int)
+        function A_mul_B!(y::VecOrMat{$elty}, A::Matrix{$elty}, x::VecOrMat{$elty}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
             ccall((@blasfunc($fname), libblas), Void,
                 (Ptr{UInt8}, Ptr{BlasInt}, Ptr{BlasInt}, Ptr{$elty},
                  Ptr{$elty}, Ptr{BlasInt}, Ptr{$elty}, Ptr{BlasInt},
                  Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}),
                  &'N', &size(A,1), &size(A,2), &$elty(1.0),
-                 A, &max(1,stride(A,2)), pointer(v, jstart), &1,
-                 &$elty(1.0), pointer(u, istart), &1)
-             u
+                 A, &max(1,stride(A,2)), pointer(x, jstart), &INCX,
+                 &$elty(1.0), pointer(y, istart), &INCY)
+             y
         end
     end
 end
 
 # LowRankMatrix
 
-A_mul_B!{T}(u::Vector{T}, L::LowRankMatrix{T}, v::AbstractVector{T}) = A_mul_B!(u, L, v, 1, 1)
+A_mul_B!{T}(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T}) = A_mul_B!(y, L, x, 1, 1)
+A_mul_B!{T}(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) = A_mul_B!(y, L, x, istart, jstart, 1, 1)
 
-function A_mul_B!{T}(u::Vector{T}, L::LowRankMatrix{T}, v::AbstractVector{T}, istart::Int, jstart::Int)
+function A_mul_B!{T}(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
     m, n = size(L)
-    ishift, jshift = istart-1, jstart-1
+    ishift, jshift = istart-INCY, jstart-INCX
     temp = L.temp
 
     @inbounds for k = 1:rank(L)
         temp[k] = zero(T)
         for j = 1:n
-            temp[k] += L.V[j,k]*v[jshift+j]
+            temp[k] += L.V[j,k]*x[jshift+j*INCX]
         end
         temp[k] *= L.Σ[k,k]
     end
@@ -83,11 +86,11 @@ function A_mul_B!{T}(u::Vector{T}, L::LowRankMatrix{T}, v::AbstractVector{T}, is
     @inbounds for k = 1:rank(L)
         tempk = temp[k]
         for i = 1:m
-            u[ishift+i] += L.U[i,k]*tempk
+            y[ishift+i*INCY] += L.U[i,k]*tempk
         end
     end
 
-    u
+    y
 end
 
 # BLAS'ed
@@ -96,14 +99,14 @@ for (fname, elty) in ((:dgemv_,:Float64),
                       (:zgemv_,:Complex128),
                       (:cgemv_,:Complex64))
     @eval begin
-        function A_mul_B!(u::Vector{$elty}, L::LowRankMatrix{$elty}, v::Vector{$elty}, istart::Int, jstart::Int)
+        function A_mul_B!(y::VecOrMat{$elty}, L::LowRankMatrix{$elty}, x::VecOrMat{$elty}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
             fill!(L.temp, zero($elty))
             ccall((@blasfunc($fname), libblas), Void,
                 (Ptr{UInt8}, Ptr{BlasInt}, Ptr{BlasInt}, Ptr{$elty},
                  Ptr{$elty}, Ptr{BlasInt}, Ptr{$elty}, Ptr{BlasInt},
                  Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}),
                  &'T', &size(L,2), &rank(L), &$elty(1.0),
-                 L.V, &max(1,stride(L.V,2)), pointer(v, jstart), &1,
+                 L.V, &max(1,stride(L.V,2)), pointer(x, jstart), &INCX,
                  &$elty(1.0), L.temp, &1)
             unsafe_broadcasttimes!(L.temp, L.Σ.diag)
             ccall((@blasfunc($fname), libblas), Void,
@@ -112,9 +115,9 @@ for (fname, elty) in ((:dgemv_,:Float64),
                  Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}),
                  &'N', &size(L,1), &rank(L), &$elty(1.0),
                  L.U, &max(1,stride(L.U,2)), L.temp, &1,
-                 &$elty(1.0), pointer(u, istart), &1)
+                 &$elty(1.0), pointer(y, istart), &INCY)
 
-             u
+             y
         end
     end
 end
