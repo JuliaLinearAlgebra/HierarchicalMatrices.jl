@@ -46,21 +46,57 @@ function A_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVe
     y
 end
 
+At_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) = At_mul_B!(y, A, x, istart, jstart, 1, 1)
+
+function At_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
+    m, n = size(A)
+    ishift, jshift = istart-INCY, jstart-INCX
+    @inbounds for i = 1:m
+        yi = zero(eltype(y))
+        for j = 1:n
+            yi += A[j,i]*x[jshift+j*INCX]
+        end
+        y[ishift+i*INCY] += yi
+    end
+
+    y
+end
+
+Ac_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) = Ac_mul_B!(y, A, x, istart, jstart, 1, 1)
+
+function Ac_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
+    m, n = size(A)
+    ishift, jshift = istart-INCY, jstart-INCX
+    @inbounds for i = 1:m
+        yi = zero(eltype(y))
+        for j = 1:n
+            yi += conj(A[j,i])*x[jshift+j*INCX]
+        end
+        y[ishift+i*INCY] += yi
+    end
+
+    y
+end
+
 # BLAS'ed
-for (fname, elty) in ((:dgemv_,:Float64),
-                      (:sgemv_,:Float32),
-                      (:zgemv_,:Complex128),
-                      (:cgemv_,:Complex64))
-    @eval begin
-        function A_mul_B!(y::VecOrMat{$elty}, A::Matrix{$elty}, x::VecOrMat{$elty}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
-            ccall((@blasfunc($fname), libblas), Void,
-                (Ptr{UInt8}, Ptr{BlasInt}, Ptr{BlasInt}, Ptr{$elty},
-                 Ptr{$elty}, Ptr{BlasInt}, Ptr{$elty}, Ptr{BlasInt},
-                 Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}),
-                 &'N', &size(A,1), &size(A,2), &$elty(1.0),
-                 A, &max(1,stride(A,2)), pointer(x, jstart), &INCX,
-                 &$elty(1.0), pointer(y, istart), &INCY)
-             y
+for (f!, char) in ((:A_mul_B!,  'N'),
+                   (:At_mul_B!, 'T'),
+                   (:Ac_mul_B!, 'C'))
+    for (fname, elty) in ((:dgemv_, :Float64),
+                          (:sgemv_, :Float32),
+                          (:zgemv_, :Complex128),
+                          (:cgemv_, :Complex64))
+        @eval begin
+            function $f!(y::VecOrMat{$elty}, A::Matrix{$elty}, x::VecOrMat{$elty}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
+                ccall((@blasfunc($fname), libblas), Void,
+                    (Ptr{UInt8}, Ptr{BlasInt}, Ptr{BlasInt}, Ptr{$elty},
+                     Ptr{$elty}, Ptr{BlasInt}, Ptr{$elty}, Ptr{BlasInt},
+                     Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}),
+                     &$char, &size(A,1), &size(A,2), &$elty(1.0),
+                     A, &max(1,stride(A,2)), pointer(x, jstart), &INCX,
+                     &$elty(1.0), pointer(y, istart), &INCY)
+                 y
+            end
         end
     end
 end

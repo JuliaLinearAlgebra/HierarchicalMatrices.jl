@@ -7,7 +7,8 @@ module HierarchicalMatrices
     BLOCKRANK(T) = round(Int, log(3+sqrt(T(8)), inv(eps(T))))
 
     import Base: size, rank, norm, cond, istriu, istril, issymmetric, ishermitian, convert, view
-    import Base: copy, getindex, setindex!, show, transpose, ctranspose, one, zero, inv, A_mul_B!
+    import Base: copy, getindex, setindex!, show, transpose, ctranspose, one, zero, inv
+    import Base: A_mul_B!, At_mul_B!, Ac_mul_B!
     import Base: broadcast, scale!, Matrix, promote_op
     import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==, !=
     import Base.LinAlg: checksquare, SingularException, Factorization
