@@ -51,9 +51,9 @@ At_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T
 function At_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
     m, n = size(A)
     ishift, jshift = istart-INCY, jstart-INCX
-    @inbounds for i = 1:m
+    @inbounds for i = 1:n
         yi = zero(eltype(y))
-        for j = 1:n
+        for j = 1:m
             yi += A[j,i]*x[jshift+j*INCX]
         end
         y[ishift+i*INCY] += yi
@@ -67,9 +67,9 @@ Ac_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T
 function Ac_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
     m, n = size(A)
     ishift, jshift = istart-INCY, jstart-INCX
-    @inbounds for i = 1:m
+    @inbounds for i = 1:n
         yi = zero(eltype(y))
-        for j = 1:n
+        for j = 1:m
             yi += conj(A[j,i])*x[jshift+j*INCX]
         end
         y[ishift+i*INCY] += yi
