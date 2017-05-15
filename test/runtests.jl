@@ -1,47 +1,46 @@
 using HierarchicalMatrices
 using Base.Test
 
-A = [0.73518 0.629211 0.713292 0.734653 0.290774;
- 0.0548989 0.316794 0.720346 0.897579 0.77479;
- 0.765255 0.205531 0.322256 0.0831089 0.319595;
- 0.663021 0.842094 0.487654 0.23203 0.636952;
- 0.00784803 0.432849 0.88896 0.219366 0.566376]
+srand(0)
 
-x = [0.317155, 0.574438, 0.871056, 0.434391, 0.350954, 0.792202, 0.567968, 0.0245772, 0.799466, 0.573985, 0.250583, 0.493318, 0.980001, 0.304531, 0.229259, 0.510598, 0.955677, 0.282656, 0.638182, 0.57502]
+for T in (Float32, Float64)
+    A = rand(T, 10, 5)
+    x = rand(T, 40)
 
-y = zero(x)
-A_mul_B!(y, A, x, 1, 1)
-@test y[1:5] == A*x[1:5]
+    y = zero(x)
+    HierarchicalMatrices.A_mul_B!(y, A, x, 1, 1)
+    @test y[1:10] == A*x[1:5]
 
-fill!(y, 0.0)
-A_mul_B!(y, A, x, 5, 5, 2, 2)
-@test y[5:2:14] == A*x[5:2:14]
+    fill!(y, 0.0)
+    HierarchicalMatrices.A_mul_B!(y, A, x, 5, 5, 2, 2)
+    @test y[5:2:23] == A*x[5:2:14]
 
-fill!(y, 0.0)
-At_mul_B!(y, A, x, 1, 5, 2, 1)
-@test y[1:5] == A'x[5:2:14]
+    fill!(y, 0.0)
+    HierarchicalMatrices.At_mul_B!(y, A, x, 1, 5, 2, 1)
+    @test y[1:5] == A'x[5:2:23]
 
-fill!(y, 0.0)
-At_mul_B!(y, A, x, 6, 3, 1, 3)
-@test y[6:3:18] == A'*x[3:7]
+    fill!(y, 0.0)
+    HierarchicalMatrices.At_mul_B!(y, A, x, 6, 3, 1, 3)
+    @test y[6:3:18] == A'*x[3:12]
 
-A = map(big, A)
-x = map(big, x)
+    A = map(big, A)
+    x = map(big, x)
 
-y = zero(x)
-A_mul_B!(y, A, x, 1, 1)
-@test y[1:5] == A*x[1:5]
+    y = zero(x)
+    HierarchicalMatrices.A_mul_B!(y, A, x, 1, 1)
+    @test y[1:10] == A*x[1:5]
 
-fill!(y, 0.0)
-A_mul_B!(y, A, x, 5, 5, 2, 2)
-@test y[5:2:14] == A*x[5:2:14]
+    fill!(y, 0.0)
+    HierarchicalMatrices.A_mul_B!(y, A, x, 5, 5, 2, 2)
+    @test y[5:2:23] == A*x[5:2:14]
 
-fill!(y, 0.0)
-At_mul_B!(y, A, x, 1, 5, 2, 1)
-@test y[1:5] == A'x[5:2:14]
+    fill!(y, 0.0)
+    HierarchicalMatrices.At_mul_B!(y, A, x, 1, 5, 2, 1)
+    @test y[1:5] == A'x[5:2:23]
 
-fill!(y, 0.0)
-At_mul_B!(y, A, x, 6, 3, 1, 3)
-@test y[6:3:18] == A'*x[3:7]
+    fill!(y, 0.0)
+    HierarchicalMatrices.At_mul_B!(y, A, x, 6, 3, 1, 3)
+    @test y[6:3:18] == A'*x[3:12]
+end
 
 include("../examples/Cauchy.jl")

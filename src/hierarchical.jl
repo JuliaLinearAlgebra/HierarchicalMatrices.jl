@@ -8,11 +8,13 @@ macro hierarchical(HierarchicalType, Types...)
     Factorization = parse(string(HierarchicalType)*"Factorization")
     return esc(quote
         import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==
+        import Base: size, getindex, setindex!
+        import Base.LinAlg: Factorization
         import Compat
 
-        import HierarchicalMatrices: add_col!
+        import HierarchicalMatrices: add_col!, blocksize, blockgetindex
 
-        AbstractSuperType = promote_type(map(eval,$Types)...)
+        AbstractSuperType = promote_type(map(eval, $Types)...)
 
         export $AbstractHierarchicalType, $HierarchicalType, $Factorization
 
@@ -20,7 +22,7 @@ macro hierarchical(HierarchicalType, Types...)
 
         blocksize(H::$AbstractHierarchicalType) = size(H.assigned)
 
-        function Base.size(H::$AbstractHierarchicalType)
+        function size(H::$AbstractHierarchicalType)
             M, N = blocksize(H)
 
             p = 0
@@ -59,26 +61,7 @@ macro hierarchical(HierarchicalType, Types...)
             factors::Matrix{Matrix{T}}
         end
 
-        @generated function blocksize(H::$HierarchicalType, m::Int, n::Int)
-            L = length(fieldnames(H))-1
-            T = fieldname(H, 1)
-            str = "
-            begin
-                Hmn = H.assigned[m,n]
-                if Hmn == 1
-                    return size(getindex(H.$T, m, n))"
-            for l in 2:L
-                T = fieldname(H, l)
-                str *= "
-                elseif Hmn == $l
-                    return size(getindex(H.$T, m, n))"
-            end
-            str *= "
-                end
-                return (0,0)
-            end"
-            return parse(str)
-        end
+        blocksize(H::$HierarchicalType, m::Int, n::Int) = blocksize(H, m, n, 1), blocksize(H, m, n, 2)
 
         @generated function blocksize(H::$HierarchicalType, m::Int, n::Int, k::Int)
             L = length(fieldnames(H))-1
@@ -122,7 +105,36 @@ macro hierarchical(HierarchicalType, Types...)
             return parse(str)
         end
 
-        @generated function Base.setindex!{S}(H::$HierarchicalType{S}, A::AbstractMatrix{S}, B1::Block, B2::Block)
+        function getindex(H::$HierarchicalType, i::Int, j::Int)
+            p, q = size(H)
+            M, N = blocksize(H)
+
+            m = 1
+            while m ≤ M
+                r = blocksize(H, m, N, 1)
+                if i > r
+                    i -= r
+                    m += 1
+                else
+                    break
+                end
+            end
+
+            n = 1
+            while n ≤ N
+                s = blocksize(H, 1, n, 2)
+                if j > s
+                    j -= s
+                    n += 1
+                else
+                    break
+                end
+            end
+
+            blockgetindex(H, m, n, i, j)
+        end
+
+        @generated function setindex!{S}(H::$HierarchicalType{S}, A::AbstractMatrix{S}, B1::Block, B2::Block)
             L = length(fieldnames(H))-1
             T = fieldname(H, 1)
             str = "

@@ -2,53 +2,47 @@
 
 size(B::AbstractBarycentricMatrix) = (B.b-B.a+1, B.d-B.c+1)
 
-for BMAT in (:EvenBarycentricMatrix,)
-    @eval begin
+immutable EvenBarycentricMatrix{T} <: AbstractBarycentricMatrix{T}
+    a::Int64
+    b::Int64
+    c::Int64
+    d::Int64
+    x::Vector{T}
+    λ::Vector{T}
+    w::Vector{T}
+    β::Vector{T}
+    W::Matrix{T}
+    F::Matrix{T}
+end
 
-        immutable $BMAT{T} <: AbstractBarycentricMatrix{T}
-            a::Int64
-            b::Int64
-            c::Int64
-            d::Int64
-            x::Vector{T}
-            λ::Vector{T}
-            w::Vector{T}
-            β::Vector{T}
-            W::Matrix{T}
-            F::Matrix{T}
+function EvenBarycentricMatrix{T}(::Type{T}, f::Function, a::Int64, b::Int64, c::Int64, d::Int64)
+    n = BLOCKRANK(T)
+    x = chebyshevpoints(T, n)
+    λ = chebyshevbarycentricweights(T, n)
+
+    w = zeros(T, b-a+1)
+    β = zeros(T, n)
+    @inbounds for i = a:b
+        for k = 1:n
+            w[i+1-a] += λ[k]*inv(2i-a-b-(b-a)*x[k])
         end
-
-        function $BMAT{T}(::Type{T}, f::Function, a::Int64, b::Int64, c::Int64, d::Int64)
-            n = BLOCKRANK(T)
-            x = chebyshevpoints(T, n)
-            λ = chebyshevbarycentricweights(T, n)
-
-            w = zeros(T, b-a+1)
-            β = zeros(T, n)
-            @inbounds for i = a:b
-                for k = 1:n
-                    w[i+1-a] += λ[k]*inv(2i-a-b-(b-a)*x[k])
-                end
-            end
-
-            W = zeros(T, n, b-a+1)
-            @inbounds for i = a:b
-                for k = 1:n
-                    W[k,i-a+1] = λ[k]*inv((2i-a-b-(b-a)*x[k])*w[i+1-a])
-                end
-            end
-
-            F = zeros(T, d-c+1, n)
-            @inbounds for k = 1:n
-                for j = c:d
-                    F[j-c+1,k] = f(T,(a+b)/2+(b-a)*x[k]/2,j)
-                end
-            end
-
-            $BMAT(a,b,c,d,x,λ,w,β,W,F)
-        end
-
     end
+
+    W = zeros(T, n, b-a+1)
+    @inbounds for i = a:b
+        for k = 1:n
+            W[k, i-a+1] = λ[k]*inv((2i-a-b-(b-a)*x[k])*w[i+1-a])
+        end
+    end
+
+    F = zeros(T, d-c+1, n)
+    @inbounds for k = 1:n
+        for j = c:d
+            F[j-c+1, k] = f(T,(a+b)/2+(b-a)*x[k]/2,j)
+        end
+    end
+
+    EvenBarycentricMatrix(a, b, c, d, x, λ, w, β, W, F)
 end
 
 function getindex{T}(B::EvenBarycentricMatrix{T}, i::Int, j::Int)
@@ -56,7 +50,7 @@ function getindex{T}(B::EvenBarycentricMatrix{T}, i::Int, j::Int)
 
     if iseven(size(B, 1)+size(B, 2)+i+j)
         @inbounds for k = 1:length(B.x)
-            ret += B.F[j,k]*B.W[k,i]
+            ret += B.F[j, k]*B.W[k, i]
         end
     end
 
@@ -80,14 +74,14 @@ function barycentricmatrix{T}(::Type{T}, f::Function, a::Int64, b::Int64, c::Int
     W = zeros(T, b-a+1, n)
     @inbounds for k = 1:n
         for i = a:b
-            W[i-a+1,k] = λ[k]*inv((2i-a-b-(b-a)*x[k])*w[i+1-a])
+            W[i-a+1, k] = λ[k]*inv((2i-a-b-(b-a)*x[k])*w[i+1-a])
         end
     end
 
     F = zeros(T, d-c+1, n)
     @inbounds for k = 1:n
         for j = c:d
-            F[j-c+1,k] = f(T,(a+b)/2+(b-a)*x[k]/2,j)
+            F[j-c+1, k] = f(T,(a+b)/2+(b-a)*x[k]/2,j)
         end
     end
 
@@ -176,7 +170,7 @@ function BarycentricPoly2D{T}(::Type{T}, f::Function, a::T, b::T, c::T, d::T)
     @inbounds for n in 1:ry
         yn = y[n]
         for m in 1:rx
-            F[m,n] = f(T,x[m],yn)
+            F[m,n] = f(T, x[m], yn)
         end
     end
 
@@ -223,15 +217,15 @@ immutable BarycentricMatrix2D{T} <: AbstractBarycentricMatrix{T}
     temp2::Vector{T}
 end
 
-Base.size(B::BarycentricMatrix2D) = (length(B.ir), length(B.jr))
+size(B::BarycentricMatrix2D) = (length(B.ir), length(B.jr))
 
-function Base.getindex{T}(B::BarycentricMatrix2D{T}, i::Int, j::Int)
+function getindex{T}(B::BarycentricMatrix2D{T}, i::Int, j::Int)
     r = size(B.B.F, 1)
     ret = zero(T)
     for k in 1:r
         temp = zero(T)
         for l in 1:r
-            temp += B.B.F[k,l]*B.V[j,l]
+            temp += B.B.F[k, l]*B.V[j, l]
         end
         ret += B.U[i,k]*temp
     end

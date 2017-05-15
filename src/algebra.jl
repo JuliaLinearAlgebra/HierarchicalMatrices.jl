@@ -410,3 +410,14 @@ function add_col{T<:BlasReal}(L::LowRankMatrix{T}, u::Vector{T}, istart::Int, j:
 
     LowRankMatrix(U1,Σ1,V1)
 end
+
+function update!{T}(::Type{T}, f::Function, A::AbstractMatrix{T}, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int})
+    ishift = 1-first(ir)
+    jshift = 1-first(jr)
+
+    for j in jr, i in ir
+        A[i+ishift,j+jshift] = f(T, x[i], y[j])
+    end
+
+    A
+end

@@ -12,7 +12,7 @@ end
 function cauchymatrix{T}(::Type{T}, x::Vector{T}, y::Vector{T})
     ret = zeros(T, length(x), length(y))
     for j in 1:length(y), i in 1:length(x)
-        ret[i,j] = cauchykernel(T,x[i],y[j])
+        ret[i,j] = cauchykernel(T, x[i], y[j])
     end
     ret
 end
@@ -23,29 +23,12 @@ end
 
 using HierarchicalMatrices
 
-import HierarchicalMatrices: chebyshevpoints, half, two, update!
+import HierarchicalMatrices: chebyshevpoints, half
 
 @hierarchical CauchyMatrix BarycentricMatrix2D Matrix
 
-
-x = chebyshevpoints(Float64, 200);
-y = chebyshevpoints(Float64, 200);
-
-B = BarycentricMatrix2D(Float64, cauchykernel, -1.0, -0.5, 0.5, 1.0, x, y, 134:200, 1:67)
-
-norm(vec(B - Float64[cauchykernel(Float64, B.x[i], B.y[j]) for i in B.ir, j in B.jr]), Inf)
-
-x .+= 1e-3rand(length(x))
-y .+= 1e-3rand(length(y))
-
-update!(B, x, y, B.ir, B.jr)
-
-norm(vec(B - Float64[cauchykernel(Float64, B.x[i], B.y[j]) for i in B.ir, j in B.jr]), Inf)
-
-
-import Base: scale!, Matrix, promote_op
+import Base: promote_op
 import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==, !=
-import Base.LinAlg: checksquare, SingularException, Factorization
 
 if VERSION < v"0.6-"
     import Base.LinAlg: arithtype
@@ -61,38 +44,9 @@ else
     end
 end
 
-Base.A_mul_B!(u::Vector, H::AbstractCauchyMatrix, v::AbstractVector) = A_mul_B!(u, H, v, 1, 1)
+Base.A_mul_B!(u::Vector, H::AbstractCauchyMatrix, v::AbstractVector) = HierarchicalMatrices.A_mul_B!(u, H, v, 1, 1)
 
-function Base.getindex(H::CauchyMatrix, i::Int, j::Int)
-    p, q = size(H)
-    M, N = blocksize(H)
-
-    m = 1
-    while m ≤ M
-        r = blocksize(H, m, N, 1)
-        if i > r
-            i -= r
-            m += 1
-        else
-            break
-        end
-    end
-
-    n = 1
-    while n ≤ N
-        s = blocksize(H, 1, n, 2)
-        if j > s
-            j -= s
-            n += 1
-        else
-            break
-        end
-    end
-
-    blockgetindex(H, m, n, i, j)
-end
-
-@generated function Base.A_mul_B!{S}(u::Vector{S}, H::CauchyMatrix{S}, v::AbstractVector{S}, istart::Int, jstart::Int)
+@generated function HierarchicalMatrices.A_mul_B!{S}(u::Vector{S}, H::CauchyMatrix{S}, v::AbstractVector{S}, istart::Int, jstart::Int)
     L = length(fieldnames(H))-1
     T = fieldname(H, 1)
     str = "
@@ -104,12 +58,12 @@ end
             for n = 1:N
                 Hmn = H.assigned[m,n]
                 if Hmn == 1
-                    A_mul_B!(u, getindex(H.$T, m, n), v, istart + p, jstart + q)"
+                    HierarchicalMatrices.A_mul_B!(u, getindex(H.$T, m, n), v, istart + p, jstart + q)"
     for l in 2:L
         T = fieldname(H, l)
         str *= "
                 elseif Hmn == $l
-                    A_mul_B!(u, getindex(H.$T, m, n), v, istart + p, jstart + q)"
+                    HierarchicalMatrices.A_mul_B!(u, getindex(H.$T, m, n), v, istart + p, jstart + q)"
     end
     str *= "
                 end
@@ -193,29 +147,6 @@ function CauchyMatrix2{T}(x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::Un
     end
 end
 
-
-function update!{T}(::Type{T}, f::Function, A::Matrix{T}, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int})
-    ishift = 1-first(ir)
-    jshift = 1-first(jr)
-    @assert size(A) == (length(ir), length(jr))
-
-    for j in jr, i in ir
-        A[i+ishift,j+jshift] = f(T,x[i],y[j])
-    end
-
-    A
-end
-
-@generated function update!{T}(::Type{T}, f::Function, H::CauchyMatrix{T}, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int})
-    ishift = 1-first(ir)
-    jshift = 1-first(jr)
-
-    for j in jr, i in ir
-        A[i+ishift,j+jshift] = f(T,x[i],y[j])
-    end
-
-    A
-end
 
 # It is in the large-N asymptotic regime that the hierarchical approach
 # demonstrates quasi-linear scaling, whereas normally we would expect quadratic

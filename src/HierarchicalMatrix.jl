@@ -2,56 +2,35 @@
 
 if VERSION < v"0.6-"
     import Base.LinAlg: arithtype
-    function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractVecOrMat{S})
+    function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractVector{S})
         TS = promote_op(*, arithtype(T), arithtype(S))
         A_mul_B!(zeros(TS, size(H, 1)), H, x)
     end
+    function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractMatrix{S})
+        TS = promote_op(*, arithtype(T), arithtype(S))
+        A_mul_B!(zeros(TS, size(H, 1), size(x, 2)), H, x)
+    end
 else
     import Base.LinAlg: matprod
-    function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractVecOrMat{S})
+    function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractVector{S})
         TS = promote_op(matprod, T, S)
         A_mul_B!(zeros(TS, size(H, 1)), H, x)
+    end
+    function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractMatrix{S})
+        TS = promote_op(matprod, T, S)
+        A_mul_B!(zeros(TS, size(H, 1), size(x, 2)), H, x)
     end
 end
 
 Base.A_mul_B!(y::AbstractVecOrMat, H::AbstractHierarchicalMatrix, x::AbstractVecOrMat) = A_mul_B!(y, H, x, 1, 1)
-Base.A_mul_B!(y::AbstractVecOrMat, H::AbstractHierarchicalMatrix, x::AbstractVecOrMat, istart::Int, jstart::Int) = A_mul_B!(y, H, x, istart, jstart, 1, 1)
+A_mul_B!(y::AbstractVecOrMat, H::AbstractHierarchicalMatrix, x::AbstractVecOrMat, istart::Int, jstart::Int) = A_mul_B!(y, H, x, istart, jstart, 1, 1)
 
 Base.scale!(H::AbstractHierarchicalMatrix, b::AbstractVector) = scale!(H, b, 1)
 Base.scale!(b::AbstractVector, H::AbstractHierarchicalMatrix) = scale!(b, H, 1)
 
 add_col!(H::AbstractHierarchicalMatrix, u::Vector, j::Int) = add_col!(H, u, 1, j)
 
-function Base.getindex(H::HierarchicalMatrix, i::Int, j::Int)
-    p, q = size(H)
-    M, N = blocksize(H)
-
-    m = 1
-    while m ≤ M
-        r = blocksize(H, m, N, 1)
-        if i > r
-            i -= r
-            m += 1
-        else
-            break
-        end
-    end
-
-    n = 1
-    while n ≤ N
-        s = blocksize(H, 1, n, 2)
-        if j > s
-            j -= s
-            n += 1
-        else
-            break
-        end
-    end
-
-    blockgetindex(H, m, n, i, j)
-end
-
-@generated function Base.A_mul_B!(y::AbstractVecOrMat, H::HierarchicalMatrix, x::AbstractVecOrMat, istart::Int, jstart::Int, INCX::Int, INCY::Int)
+@generated function A_mul_B!(y::AbstractVecOrMat, H::HierarchicalMatrix, x::AbstractVecOrMat, istart::Int, jstart::Int, INCX::Int, INCY::Int)
     L = length(fieldnames(H))-1
     T = fieldname(H, 1)
     str = "
@@ -81,7 +60,7 @@ end
     return parse(str)
 end
 
-@generated function Base.scale!(H::HierarchicalMatrix, b::AbstractVector, jstart::Int)
+@generated function scale!(H::HierarchicalMatrix, b::AbstractVector, jstart::Int)
     L = length(fieldnames(H))-1
     T = fieldname(H, 1)
     str = "
@@ -109,7 +88,7 @@ end
     return parse(str)
 end
 
-@generated function Base.scale!(b::AbstractVector, H::HierarchicalMatrix, istart::Int)
+@generated function scale!(b::AbstractVector, H::HierarchicalMatrix, istart::Int)
     L = length(fieldnames(H))-1
     T = fieldname(H, 1)
     str = "
