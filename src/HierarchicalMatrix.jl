@@ -1,6 +1,6 @@
 @hierarchical HierarchicalMatrix LowRankMatrix Matrix
 
-if VERSION < v"0.6-"
+if VERSION < v"0.6.0-dev.1108" # julia PR #18218
     import Base.LinAlg: arithtype
     function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractVector{S})
         TS = promote_op(*, arithtype(T), arithtype(S))
