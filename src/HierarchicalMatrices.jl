@@ -3,10 +3,9 @@ module HierarchicalMatrices
 
     using Compat
 
-    BLOCKSIZE{R<:Real}(T::Type{R}) = round(Int, 4log(3+sqrt(T(8)), inv(eps(T))))
-    BLOCKRANK{R<:Real}(T::Type{R}) = round(Int, log(3+sqrt(T(8)), inv(eps(T))))
-    BLOCKSIZE{C<:Complex}(T::Type{C}) = BLOCKSIZE(real(T))
+    BLOCKRANK{R<:Real}(T::Type{R}) = 2round(Int, half(T)*log(3+sqrt(T(8)), inv(eps(T))))
     BLOCKRANK{C<:Complex}(T::Type{C}) = BLOCKRANK(real(T))
+    BLOCKSIZE(T) = 4BLOCKRANK(T)
 
     import Base: size, rank, norm, cond, istriu, istril, issymmetric, ishermitian, convert, view
     import Base: copy, getindex, setindex!, show, transpose, ctranspose, one, zero, inv, isless

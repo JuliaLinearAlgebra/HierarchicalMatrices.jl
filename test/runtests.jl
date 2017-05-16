@@ -1,6 +1,10 @@
 using HierarchicalMatrices
 using Base.Test
 
+for r in map(BLOCKRANK, subtypes(AbstractFloat))
+    @test iseven(r)
+end
+
 srand(0)
 
 for T in (Float32, Float64)
