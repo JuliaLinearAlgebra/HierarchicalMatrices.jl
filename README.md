@@ -1,6 +1,6 @@
 # HierarchicalMatrices.jl
 
-[![Build Status](https://travis-ci.org/MikaelSlevinsky/HierarchicalMatrices.jl.svg?branch=master)](https://travis-ci.org/MikaelSlevinsky/HierarchicalMatrices.jl)
+[![Build Status](https://travis-ci.org/MikaelSlevinsky/HierarchicalMatrices.jl.svg?branch=master)](https://travis-ci.org/MikaelSlevinsky/HierarchicalMatrices.jl) [![AppVeyor](https://ci.appveyor.com/api/projects/status/qge6qn99t4xhlxmo/branch/master?svg=true)](https://ci.appveyor.com/project/MikaelSlevinsky/hierarchicalmatrices-jl/branch/master)
 
 This package provides a flexible framework for hierarchical data types in Julia.
 

@@ -3,10 +3,10 @@
 size(B::AbstractBarycentricMatrix) = (B.b-B.a+1, B.d-B.c+1)
 
 immutable EvenBarycentricMatrix{T} <: AbstractBarycentricMatrix{T}
-    a::Int64
-    b::Int64
-    c::Int64
-    d::Int64
+    a::Int
+    b::Int
+    c::Int
+    d::Int
     x::Vector{T}
     λ::Vector{T}
     w::Vector{T}
@@ -15,7 +15,7 @@ immutable EvenBarycentricMatrix{T} <: AbstractBarycentricMatrix{T}
     F::Matrix{T}
 end
 
-function EvenBarycentricMatrix{T}(::Type{T}, f::Function, a::Int64, b::Int64, c::Int64, d::Int64)
+function EvenBarycentricMatrix{T}(::Type{T}, f::Function, a::Int, b::Int, c::Int, d::Int)
     n = BLOCKRANK(T)
     x = chebyshevpoints(T, n)
     λ = chebyshevbarycentricweights(T, n)
@@ -58,7 +58,7 @@ function getindex{T}(B::EvenBarycentricMatrix{T}, i::Int, j::Int)
 end
 
 
-function barycentricmatrix{T}(::Type{T}, f::Function, a::Int64, b::Int64, c::Int64, d::Int64)
+function barycentricmatrix{T}(::Type{T}, f::Function, a::Int, b::Int, c::Int, d::Int)
     n = BLOCKRANK(T)
     x = chebyshevpoints(T, n)
     λ = chebyshevbarycentricweights(T, n)
