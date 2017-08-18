@@ -7,6 +7,8 @@ end
 
 srand(0)
 
+@hierarchical UpperTriangularHierarchicalMatrix Matrix (UpperTriangular, LowRankMatrix) Diagonal
+
 for T in (Float32, Float64)
     A = rand(T, 10, 5)
     x = rand(T, 40)
@@ -45,6 +47,10 @@ for T in (Float32, Float64)
     fill!(y, 0.0)
     HierarchicalMatrices.At_mul_B!(y, A, x, 6, 3, 1, 3)
     @test y[6:3:18] == A'*x[3:12]
+
+    UTHM = UpperTriangularHierarchicalMatrix(T, 2, 2)
+
+    @test typeof(UTHM.UpperTriangularblocks) == Matrix{UpperTriangular{T,LowRankMatrix{T}}}
 end
 
 include("../examples/Cauchy.jl")

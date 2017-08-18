@@ -2,7 +2,13 @@ macro hierarchical(HierarchicalType, Types...)
     blocks = :(begin end)
     push!(blocks.args, :($(Symbol("$(HierarchicalType)blocks"))::Matrix{$HierarchicalType{T}}))
     for i in 1:length(Types)
-        push!(blocks.args, :($(Symbol("$(Types[i])blocks"))::Matrix{$(Types[i]){T}}))
+        if typeof(Types[i]) == Symbol
+            push!(blocks.args, :($(Symbol("$(Types[i])blocks"))::Matrix{$(Types[i]){T}}))
+        elseif typeof(Types[i]) == Expr
+            push!(blocks.args, :($(Symbol("$(Types[i].args[1])blocks"))::Matrix{$(Types[i].args[1]){T,$(Types[i].args[2]){T}}}))
+        else
+            error("Invalid hierarchical symbol.")
+        end
     end
     AbstractHierarchicalType = parse("Abstract"*string(HierarchicalType))
     Factorization = parse(string(HierarchicalType)*"Factorization")
@@ -14,7 +20,7 @@ macro hierarchical(HierarchicalType, Types...)
 
         import HierarchicalMatrices: add_col!, blocksize, blockgetindex
 
-        AbstractSuperType = promote_type(map(eval, $Types)...)
+        AbstractSuperType = promote_type([typeof($Types[i]) == Symbol ? eval($Types[i]) : eval($Types[i].args[1]) for i in 1:length($Types)]...)
 
         export $AbstractHierarchicalType, $HierarchicalType, $Factorization
 
@@ -49,7 +55,11 @@ macro hierarchical(HierarchicalType, Types...)
             str = VERSION < v"0.6-" ? "$HM(Matrix{$HM}(M, N), " : "$HM(Matrix{$HM{T}}(M, N), "
             for l in 2:L-1
                 S = $Types[l-1]
-                str *= "Matrix{$S{T}}(M, N), "
+                if typeof(S) == Symbol
+                    str *= "Matrix{$S{T}}(M, N), "
+                else
+                    str *= "Matrix{$(S.args[1]){T, $(S.args[2]){T}}}(M, N), "
+                end
             end
             str *= "zeros(Int, M, N))"
             return parse(str)
