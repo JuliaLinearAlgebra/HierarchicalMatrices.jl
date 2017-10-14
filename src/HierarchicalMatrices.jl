@@ -1,10 +1,9 @@
 __precompile__()
 module HierarchicalMatrices
-
     using Compat
 
-    BLOCKRANK{R<:Real}(T::Type{R}) = 2round(Int, half(T)*log(3+sqrt(T(8)), inv(eps(T))))
-    BLOCKRANK{C<:Complex}(T::Type{C}) = BLOCKRANK(real(T))
+    BLOCKRANK(T::Type{R}) where {R<:Real} = 2round(Int, half(T)*log(3+sqrt(T(8)), inv(eps(T))))
+    BLOCKRANK(T::Type{C}) where {C<:Complex} = BLOCKRANK(real(T))
     BLOCKSIZE(T) = 4BLOCKRANK(T)
 
     import Base: size, rank, norm, cond, istriu, istril, issymmetric, ishermitian, convert, view
