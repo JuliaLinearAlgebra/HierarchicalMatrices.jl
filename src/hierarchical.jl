@@ -16,7 +16,6 @@ macro hierarchical(HierarchicalType, Types...)
         import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==
         import Base: size, getindex, setindex!
         import Base.LinAlg: Factorization
-        import Compat
 
         import HierarchicalMatrices: add_col!, blocksize, blockgetindex
 
@@ -24,7 +23,7 @@ macro hierarchical(HierarchicalType, Types...)
 
         export $AbstractHierarchicalType, $HierarchicalType, $Factorization
 
-        Compat.@compat abstract type $AbstractHierarchicalType{T} <: AbstractSuperType{T} end
+        abstract type $AbstractHierarchicalType{T} <: AbstractSuperType{T} end
 
         blocksize(H::$AbstractHierarchicalType) = size(H.assigned)
 
