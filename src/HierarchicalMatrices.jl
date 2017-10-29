@@ -46,6 +46,7 @@ module HierarchicalMatrices
     include("block.jl")
     include("hierarchical.jl")
     include("HierarchicalMatrix.jl")
+    include("KernelMatrix.jl")
     include("algebra.jl")
 
 end # module
