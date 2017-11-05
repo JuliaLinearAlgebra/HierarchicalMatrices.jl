@@ -1,7 +1,5 @@
 __precompile__()
 module HierarchicalMatrices
-    using Compat
-
     BLOCKRANK(T::Type{R}) where {R<:Real} = 2round(Int, half(T)*log(3+sqrt(T(8)), inv(eps(T))))
     BLOCKRANK(T::Type{C}) where {C<:Complex} = BLOCKRANK(real(T))
     BLOCKSIZE(T) = 4BLOCKRANK(T)

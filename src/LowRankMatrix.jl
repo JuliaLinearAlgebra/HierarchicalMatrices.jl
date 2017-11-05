@@ -1,4 +1,4 @@
-@compat abstract type AbstractLowRankMatrix{T} <: AbstractMatrix{T} end
+abstract type AbstractLowRankMatrix{T} <: AbstractMatrix{T} end
 
 """
 Store the singular value decomposition of a matrix:
