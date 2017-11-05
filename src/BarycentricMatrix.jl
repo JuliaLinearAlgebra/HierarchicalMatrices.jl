@@ -170,7 +170,7 @@ function BarycentricPoly2D{T}(::Type{T}, f::Function, a::T, b::T, c::T, d::T)
     @inbounds for n in 1:ry
         yn = y[n]
         for m in 1:rx
-            F[m,n] = f(T, x[m], yn)
+            F[m,n] = f(x[m], yn)
         end
     end
 

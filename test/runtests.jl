@@ -53,4 +53,4 @@ for T in (Float32, Float64)
     @test typeof(UTHM.UpperTriangularblocks) == Matrix{UpperTriangular{T,LowRankMatrix{T}}}
 end
 
-include("../examples/Cauchy.jl")
+include("../examples/Kernel.jl")
