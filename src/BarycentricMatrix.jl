@@ -2,7 +2,7 @@
 
 size(B::AbstractBarycentricMatrix) = (B.b-B.a+1, B.d-B.c+1)
 
-immutable EvenBarycentricMatrix{T} <: AbstractBarycentricMatrix{T}
+struct EvenBarycentricMatrix{T} <: AbstractBarycentricMatrix{T}
     a::Int
     b::Int
     c::Int
@@ -15,7 +15,7 @@ immutable EvenBarycentricMatrix{T} <: AbstractBarycentricMatrix{T}
     F::Matrix{T}
 end
 
-function EvenBarycentricMatrix{T}(::Type{T}, f::Function, a::Int, b::Int, c::Int, d::Int)
+function EvenBarycentricMatrix(::Type{T}, f::Function, a::Int, b::Int, c::Int, d::Int) where T
     n = BLOCKRANK(T)
     x = chebyshevpoints(T, n)
     λ = chebyshevbarycentricweights(T, n)
@@ -45,7 +45,7 @@ function EvenBarycentricMatrix{T}(::Type{T}, f::Function, a::Int, b::Int, c::Int
     EvenBarycentricMatrix(a, b, c, d, x, λ, w, β, W, F)
 end
 
-function getindex{T}(B::EvenBarycentricMatrix{T}, i::Int, j::Int)
+function getindex(B::EvenBarycentricMatrix{T}, i::Int, j::Int) where T
     ret = zero(T)
 
     if iseven(size(B, 1)+size(B, 2)+i+j)
@@ -58,7 +58,7 @@ function getindex{T}(B::EvenBarycentricMatrix{T}, i::Int, j::Int)
 end
 
 
-function barycentricmatrix{T}(::Type{T}, f::Function, a::Int, b::Int, c::Int, d::Int)
+function barycentricmatrix(::Type{T}, f::Function, a::Int, b::Int, c::Int, d::Int) where T
     n = BLOCKRANK(T)
     x = chebyshevpoints(T, n)
     λ = chebyshevbarycentricweights(T, n)
@@ -89,7 +89,7 @@ function barycentricmatrix{T}(::Type{T}, f::Function, a::Int, b::Int, c::Int, d:
 end
 
 
-function chebyshevpoints{T}(::Type{T}, n::Int; kind::Int = 1)
+function chebyshevpoints(::Type{T}, n::Int; kind::Int = 1) where T
     x = zeros(T, n)
     nd2 = n÷2
     if kind == 1
@@ -111,7 +111,7 @@ function chebyshevpoints{T}(::Type{T}, n::Int; kind::Int = 1)
 end
 
 
-function chebyshevbarycentricweights{T}(::Type{T}, n::Int; kind::Int = 1)
+function chebyshevbarycentricweights(::Type{T}, n::Int; kind::Int = 1) where T
     λ = zeros(T, n)
     nd2 = n÷2
     if kind == 1
@@ -136,7 +136,7 @@ function chebyshevbarycentricweights{T}(::Type{T}, n::Int; kind::Int = 1)
 end
 
 
-immutable BarycentricPoly2D{T}
+struct BarycentricPoly2D{T}
     x::Vector{T}
     y::Vector{T}
     λx::Vector{T}
@@ -144,7 +144,7 @@ immutable BarycentricPoly2D{T}
     F::Matrix{T}
 end
 
-function BarycentricPoly2D{T}(::Type{T}, f::Function, a::T, b::T, c::T, d::T)
+function BarycentricPoly2D(::Type{T}, f::Function, a::T, b::T, c::T, d::T) where T
     r = BLOCKRANK(T)
     rx = r
     ry = r
@@ -177,7 +177,7 @@ function BarycentricPoly2D{T}(::Type{T}, f::Function, a::T, b::T, c::T, d::T)
     BarycentricPoly2D(x, y, λx, λy, F)
 end
 
-function evaluate{T}(B::BarycentricPoly2D{T}, x::T, y::T)
+function evaluate(B::BarycentricPoly2D{T}, x::T, y::T) where T
     xr, yr, λx, λy, F = B.x, B.y, B.λx, B.λy, B.F
     r = length(xr)
     temp1, temp2, temp3 = zero(T), zero(T), zero(T)
@@ -205,7 +205,7 @@ end
 (B::BarycentricPoly2D)(x, y) = evaluate(B, x, y)
 
 
-immutable BarycentricMatrix2D{T} <: AbstractBarycentricMatrix{T}
+struct BarycentricMatrix2D{T} <: AbstractBarycentricMatrix{T}
     B::BarycentricPoly2D{T}
     x::Vector{T}
     y::Vector{T}
@@ -219,7 +219,7 @@ end
 
 size(B::BarycentricMatrix2D) = (length(B.ir), length(B.jr))
 
-function getindex{T}(B::BarycentricMatrix2D{T}, i::Int, j::Int)
+function getindex(B::BarycentricMatrix2D{T}, i::Int, j::Int) where T
     r = size(B.B.F, 1)
     ret = zero(T)
     for k in 1:r
@@ -233,11 +233,11 @@ function getindex{T}(B::BarycentricMatrix2D{T}, i::Int, j::Int)
     ret
 end
 
-function BarycentricMatrix2D{T}(::Type{T}, f::Function, a::T, b::T, c::T, d::T, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int})
+function BarycentricMatrix2D(::Type{T}, f::Function, a::T, b::T, c::T, d::T, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int}) where T
     BarycentricMatrix2D(BarycentricPoly2D(T, f, a, b, c, d), x, y, ir, jr)
 end
 
-function BarycentricMatrix2D{T}(B::BarycentricPoly2D{T}, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int})
+function BarycentricMatrix2D(B::BarycentricPoly2D{T}, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int}) where T
     r = length(B.x)
     U = zeros(T, length(ir), r)
     V = zeros(T, length(jr), r)
@@ -245,7 +245,7 @@ function BarycentricMatrix2D{T}(B::BarycentricPoly2D{T}, x::Vector{T}, y::Vector
     update!(BarycentricMatrix2D(B, x, y, ir, jr, U, V, zeros(T, r), zeros(T, r)), x, y, ir, jr)
 end
 
-function update!{T}(B::BarycentricMatrix2D{T}, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int})
+function update!(B::BarycentricMatrix2D{T}, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int}) where T
     @assert length(ir) == length(B.ir)
     @assert length(jr) == length(B.jr)
     r = length(B.B.x)
@@ -296,7 +296,7 @@ function update!{T}(B::BarycentricMatrix2D{T}, x::Vector{T}, y::Vector{T}, ir::U
     B
 end
 
-function indsplit{T}(x::Vector{T}, ir::UnitRange{Int}, a::T, b::T)
+function indsplit(x::Vector{T}, ir::UnitRange{Int}, a::T, b::T) where T
     i = first(ir)
     ab2 = half(T)*(a+b)
     while x[i] ≥ ab2

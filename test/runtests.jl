@@ -1,5 +1,10 @@
 using HierarchicalMatrices
-using Base.Test
+if VERSION ≤ v"0.7.0-DEV.1775"
+    using Base.Test
+else
+    using Test
+end
+
 
 for r in map(BLOCKRANK, subtypes(AbstractFloat))
     @test iseven(r)

@@ -25,14 +25,14 @@ module HierarchicalMatrices
     """
     half(x::Number) = oftype(x, 0.5)
     half(x::Integer) = half(float(x))
-    half{T<:Number}(::Type{T}) = convert(T, 0.5)
-    half{T<:Integer}(::Type{T}) = half(AbstractFloat)
+    half(::Type{T}) where {T<:Number} = convert(T, 0.5)
+    half(::Type{T}) where {T<:Integer} = half(AbstractFloat)
 
     """
     Compute a typed 2.
     """
     two(x::Number) = oftype(x,2)
-    two{T<:Number}(::Type{T}) = convert(T, 2)
+    two(::Type{T}) where {T<:Number} = convert(T, 2)
 
     for op in (:A_mul_B!, :At_mul_B!, :Ac_mul_B!, :scale!)
         @eval begin
