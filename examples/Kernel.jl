@@ -27,13 +27,13 @@
 
 using HierarchicalMatrices
 
-@inline cauchykernel{T}(x::T, y::T) = inv(x-y)
-@inline coulombkernel{T}(x::T, y::T) = inv((x-y)^2)
-@inline coulombprimekernel{T}(x::T, y::T) = inv((x-y)^3)
-@inline logkernel{T}(x::T, y::T) = log(abs(x-y))
+@inline cauchykernel(x::T, y::T) where T = inv(x-y)
+@inline coulombkernel(x::T, y::T) where T = inv((x-y)^2)
+@inline coulombprimekernel(x::T, y::T) where T = inv((x-y)^3)
+@inline logkernel(x::T, y::T) where T = log(abs(x-y))
 
 for f in (:cauchykernel, :coulombkernel, :coulombprimekernel, :logkernel)
-    @eval $f{T}(x::Vector{T}, y::Vector{T}) = T[$f(x, y) for x in x, y in y]
+    @eval $f(x::Vector{T}, y::Vector{T}) where T = T[$f(x, y) for x in x, y in y]
 end
 
 #

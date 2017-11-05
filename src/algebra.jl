@@ -1,4 +1,4 @@
-function unsafe_broadcasttimes!{T}(a::Vector{T}, b::Vector{T})
+function unsafe_broadcasttimes!(a::Vector{T}, b::Vector{T}) where T
     @simd for i in 1:length(a)
         Base.unsafe_setindex!(a, Base.unsafe_getindex(a, i)*Base.unsafe_getindex(b, i), i)
     end
@@ -7,12 +7,12 @@ end
 
 for op in (:(+),:(-))
     @eval begin
-        function $op{T}(B::AbstractBarycentricMatrix{T})
+        function $op(B::AbstractBarycentricMatrix{T}) where T
             B2 = deepcopy(B)
             B2.F[:] = $op(B.F)
             B2
         end
-        function $op{T}(B1::EvenBarycentricMatrix{T}, B2::EvenBarycentricMatrix{T})
+        function $op(B1::EvenBarycentricMatrix{T}, B2::EvenBarycentricMatrix{T}) where T
             @assert B1.a == B2.a && B1.b == B2.b && B1.c == B2.c && B1.d == B2.d
             @assert length(B1.x) == length(B2.x)
             B3 = deepcopy(B1)
@@ -31,9 +31,10 @@ end
 
 # Generic Matrix
 
-A_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) = A_mul_B!(y, A, x, istart, jstart, 1, 1)
+A_mul_B!(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int)  where T =
+    A_mul_B!(y, A, x, istart, jstart, 1, 1)
 
-function A_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
+function A_mul_B!(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int) where T
     m, n = size(A)
     ishift, jshift = istart-INCY, jstart-INCX
     @inbounds for j = 1:n
@@ -46,9 +47,9 @@ function A_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVe
     y
 end
 
-At_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) = At_mul_B!(y, A, x, istart, jstart, 1, 1)
+At_mul_B!(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) where T = At_mul_B!(y, A, x, istart, jstart, 1, 1)
 
-function At_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
+function At_mul_B!(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int) where T
     m, n = size(A)
     ishift, jshift = istart-INCY, jstart-INCX
     @inbounds for i = 1:n
@@ -62,9 +63,9 @@ function At_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractV
     y
 end
 
-Ac_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) = Ac_mul_B!(y, A, x, istart, jstart, 1, 1)
+Ac_mul_B!(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) where T = Ac_mul_B!(y, A, x, istart, jstart, 1, 1)
 
-function Ac_mul_B!{T}(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
+function Ac_mul_B!(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int) where T
     m, n = size(A)
     ishift, jshift = istart-INCY, jstart-INCX
     @inbounds for i = 1:n
@@ -89,12 +90,12 @@ for (f!, char) in ((:A_mul_B!,  'N'),
         @eval begin
             function $f!(y::VecOrMat{$elty}, A::Matrix{$elty}, x::VecOrMat{$elty}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
                 ccall((@blasfunc($fname), libblas), Void,
-                    (Ptr{UInt8}, Ptr{BlasInt}, Ptr{BlasInt}, Ptr{$elty},
-                     Ptr{$elty}, Ptr{BlasInt}, Ptr{$elty}, Ptr{BlasInt},
-                     Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}),
-                     &$char, &size(A,1), &size(A,2), &$elty(1.0),
-                     A, &max(1,stride(A,2)), pointer(x, jstart), &INCX,
-                     &$elty(1.0), pointer(y, istart), &INCY)
+                    (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
+                     Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                     Ref{$elty}, Ptr{$elty}, Ref{BlasInt}),
+                     $char, size(A,1), size(A,2), $elty(1.0),
+                     A, max(1,stride(A,2)), pointer(x, jstart), INCX,
+                     $elty(1.0), pointer(y, istart), INCY)
                  y
             end
         end
@@ -103,10 +104,10 @@ end
 
 # LowRankMatrix
 
-A_mul_B!{T}(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T}) = A_mul_B!(y, L, x, 1, 1)
-A_mul_B!{T}(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) = A_mul_B!(y, L, x, istart, jstart, 1, 1)
+A_mul_B!(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T}) where T = A_mul_B!(y, L, x, 1, 1)
+A_mul_B!(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) where T = A_mul_B!(y, L, x, istart, jstart, 1, 1)
 
-function A_mul_B!{T}(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
+function A_mul_B!(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int) where T
     m, n = size(L)
     ishift, jshift = istart-INCY, jstart-INCX
     temp = L.temp
@@ -138,20 +139,20 @@ for (fname, elty) in ((:dgemv_,:Float64),
         function A_mul_B!(y::VecOrMat{$elty}, L::LowRankMatrix{$elty}, x::VecOrMat{$elty}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
             fill!(L.temp, zero($elty))
             ccall((@blasfunc($fname), libblas), Void,
-                (Ptr{UInt8}, Ptr{BlasInt}, Ptr{BlasInt}, Ptr{$elty},
-                 Ptr{$elty}, Ptr{BlasInt}, Ptr{$elty}, Ptr{BlasInt},
-                 Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}),
-                 &'T', &size(L,2), &rank(L), &$elty(1.0),
-                 L.V, &max(1,stride(L.V,2)), pointer(x, jstart), &INCX,
-                 &$elty(1.0), L.temp, &1)
+                (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
+                 Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                 Ref{$elty}, Ptr{$elty}, Ref{BlasInt}),
+                 'T', size(L,2), rank(L), $elty(1.0),
+                 L.V, max(1,stride(L.V,2)), pointer(x, jstart), INCX,
+                 $elty(1.0), L.temp, 1)
             unsafe_broadcasttimes!(L.temp, L.Σ.diag)
             ccall((@blasfunc($fname), libblas), Void,
-                (Ptr{UInt8}, Ptr{BlasInt}, Ptr{BlasInt}, Ptr{$elty},
-                 Ptr{$elty}, Ptr{BlasInt}, Ptr{$elty}, Ptr{BlasInt},
-                 Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}),
-                 &'N', &size(L,1), &rank(L), &$elty(1.0),
-                 L.U, &max(1,stride(L.U,2)), L.temp, &1,
-                 &$elty(1.0), pointer(y, istart), &INCY)
+                (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
+                 Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                 Ref{$elty}, Ptr{$elty}, Ref{BlasInt}),
+                 'N', size(L,1), rank(L), $elty(1.0),
+                 L.U, max(1,stride(L.U,2)), L.temp, 1,
+                 $elty(1.0), pointer(y, istart), INCY)
 
              y
         end
@@ -160,9 +161,9 @@ end
 
 # BarycentricMatrix
 
-A_mul_B!{T}(u::Vector{T}, A::AbstractBarycentricMatrix{T}, v::AbstractVector{T}) = A_mul_B!(u, A, v, 1, 1)
+A_mul_B!(u::Vector{T}, A::AbstractBarycentricMatrix{T}, v::AbstractVector{T}) where T = A_mul_B!(u, A, v, 1, 1)
 
-function A_mul_B!{T}(u::Vector{T}, B::EvenBarycentricMatrix{T}, v::AbstractVector{T}, istart::Int, jstart::Int)
+function A_mul_B!(u::Vector{T}, B::EvenBarycentricMatrix{T}, v::AbstractVector{T}, istart::Int, jstart::Int) where T
     β, W, F = B.β, B.W, B.F
     ishift, jshift, n = istart-1, jstart-1, length(β)
 
@@ -237,7 +238,7 @@ end
 
 # BarycentricMatrix2D
 
-function A_mul_B!{T}(u::Vector{T}, B::BarycentricMatrix2D{T}, v::AbstractVector{T}, istart::Int, jstart::Int)
+function A_mul_B!(u::Vector{T}, B::BarycentricMatrix2D{T}, v::AbstractVector{T}, istart::Int, jstart::Int) where T
     U, F, V, temp1, temp2 = B.U, B.B.F, B.V, B.temp1, B.temp2
     ishift, jshift, r = istart-1, jstart-1, length(temp1)
 
@@ -282,27 +283,27 @@ for (fname, elty) in ((:dgemv_,:Float64),
         function A_mul_B!(u::Vector{$elty}, B::BarycentricMatrix2D{$elty}, v::Vector{$elty}, istart::Int, jstart::Int)
             fill!(B.temp1, zero($elty))
             ccall((@blasfunc($fname), libblas), Void,
-                (Ptr{UInt8}, Ptr{BlasInt}, Ptr{BlasInt}, Ptr{$elty},
-                 Ptr{$elty}, Ptr{BlasInt}, Ptr{$elty}, Ptr{BlasInt},
-                 Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}),
-                 &'T', &size(B.V,1), &size(B.V,2), &$elty(1.0),
-                 B.V, &max(1,stride(B.V,2)), pointer(v, jstart), &1,
-                 &$elty(1.0), B.temp1, &1)
+                (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
+                 Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                 Ref{$elty}, Ptr{$elty}, Ref{BlasInt}),
+                 'T', size(B.V,1), size(B.V,2), $elty(1.0),
+                 B.V, max(1,stride(B.V,2)), pointer(v, jstart), 1,
+                 $elty(1.0), B.temp1, 1)
             fill!(B.temp2, zero($elty))
             ccall((@blasfunc($fname), libblas), Void,
-                (Ptr{UInt8}, Ptr{BlasInt}, Ptr{BlasInt}, Ptr{$elty},
-                 Ptr{$elty}, Ptr{BlasInt}, Ptr{$elty}, Ptr{BlasInt},
-                 Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}),
-                 &'N', &size(B.B.F,1), &size(B.B.F,2), &$elty(1.0),
-                 B.B.F, &max(1,stride(B.B.F,2)), B.temp1, &1,
-                 &$elty(1.0), B.temp2, &1)
+                (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
+                 Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                 Ref{$elty}, Ptr{$elty}, Ref{BlasInt}),
+                 'N', size(B.B.F,1), size(B.B.F,2), $elty(1.0),
+                 B.B.F, max(1,stride(B.B.F,2)), B.temp1, 1,
+                 $elty(1.0), B.temp2, 1)
             ccall((@blasfunc($fname), libblas), Void,
-                (Ptr{UInt8}, Ptr{BlasInt}, Ptr{BlasInt}, Ptr{$elty},
-                 Ptr{$elty}, Ptr{BlasInt}, Ptr{$elty}, Ptr{BlasInt},
-                 Ptr{$elty}, Ptr{$elty}, Ptr{BlasInt}),
-                 &'N', &size(B.U,1), &size(B.U,2), &$elty(1.0),
-                 B.U, &max(1,stride(B.U,2)), B.temp2, &1,
-                 &$elty(1.0), pointer(u, istart), &1)
+                (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
+                 Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                 Ref{$elty}, Ptr{$elty}, Ref{BlasInt}),
+                 'N', size(B.U,1), size(B.U,2), $elty(1.0),
+                 B.U, max(1,stride(B.U,2)), B.temp2, 1,
+                 $elty(1.0), pointer(u, istart), 1)
              u
         end
     end
@@ -349,7 +350,7 @@ end
 
 # Add e_j^T u[istart:istart+size(L, 1)-1] to A.
 
-function add_col!{T}(A::AbstractMatrix{T}, u::Vector{T}, istart::Int, j::Int)
+function add_col!(A::AbstractMatrix{T}, u::Vector{T}, istart::Int, j::Int) where T
     ishift, m = istart-1, size(A, 1)
     jm = (j-1)*m
     @simd for i = 1:m
@@ -358,13 +359,13 @@ function add_col!{T}(A::AbstractMatrix{T}, u::Vector{T}, istart::Int, j::Int)
     A
 end
 
-function add_col!{T<:BlasReal}(A::Matrix{T}, u::Vector{T}, istart::Int, j::Int)
+function add_col!(A::Matrix{T}, u::Vector{T}, istart::Int, j::Int) where T<:BlasReal
     m, n = size(A, 1), size(A, 2)
     BLAS.axpy!(m, one(T), pointer(u, istart), 1, pointer(A, (j-1)*m+1), 1)
     A
 end
 
-function add_col{T}(A::AbstractMatrix{T}, u::Vector{T}, istart::Int, j::Int)
+function add_col(A::AbstractMatrix{T}, u::Vector{T}, istart::Int, j::Int) where T
     B = deepcopy(A)
     ishift, m = istart-1, size(A, 1)
     jm = (j-1)*m
@@ -374,7 +375,7 @@ function add_col{T}(A::AbstractMatrix{T}, u::Vector{T}, istart::Int, j::Int)
     B
 end
 
-function add_col{T<:BlasReal}(A::Matrix{T}, u::Vector{T}, istart::Int, j::Int)
+function add_col(A::Matrix{T}, u::Vector{T}, istart::Int, j::Int) where T<:BlasReal
     m, n = size(A, 1), size(A, 2)
     B = Matrix{T}(m, n)
     BLAS.blascopy!(m*n, A, 1, B, 1)
@@ -384,7 +385,7 @@ end
 
 # Add e_j^T u[istart:istart+size(L, 1)-1] to UΣV^T.
 
-function add_col{T}(L::LowRankMatrix{T}, u::Vector{T}, istart::Int, j::Int)
+function add_col(L::LowRankMatrix{T}, u::Vector{T}, istart::Int, j::Int) where T
     U, Σ, V = L.U, L.Σ, L.V
     U1 = hcat(U, u[istart:istart+size(L,1)-1])
     Σ1 = Diagonal(vcat(Σ.diag, one(T)))
@@ -394,7 +395,7 @@ function add_col{T}(L::LowRankMatrix{T}, u::Vector{T}, istart::Int, j::Int)
     LowRankMatrix(U1,Σ1,V1)
 end
 
-function add_col{T<:BlasReal}(L::LowRankMatrix{T}, u::Vector{T}, istart::Int, j::Int)
+function add_col(L::LowRankMatrix{T}, u::Vector{T}, istart::Int, j::Int) where T<:BlasReal
     U, Σ, V = L.U, L.Σ, L.V
     m, n, r, un = size(L, 1), size(L, 2), rank(L), one(T)
     U1 = Matrix{T}(m, r+1)
@@ -411,7 +412,7 @@ function add_col{T<:BlasReal}(L::LowRankMatrix{T}, u::Vector{T}, istart::Int, j:
     LowRankMatrix(U1,Σ1,V1)
 end
 
-function update!{T}(::Type{T}, f::Function, A::AbstractMatrix{T}, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int})
+function update!(::Type{T}, f::Function, A::AbstractMatrix{T}, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int}) where T
     ishift = 1-first(ir)
     jshift = 1-first(jr)
 

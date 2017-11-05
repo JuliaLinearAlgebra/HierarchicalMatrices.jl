@@ -1,26 +1,16 @@
 @hierarchical HierarchicalMatrix LowRankMatrix Matrix
 
-if VERSION < v"0.6.0-dev.1108" # julia PR #18218
-    import Base.LinAlg: arithtype
-    function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractVector{S})
-        TS = promote_op(*, arithtype(T), arithtype(S))
-        A_mul_B!(zeros(TS, size(H, 1)), H, x)
-    end
-    function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractMatrix{S})
-        TS = promote_op(*, arithtype(T), arithtype(S))
-        A_mul_B!(zeros(TS, size(H, 1), size(x, 2)), H, x)
-    end
-else
-    import Base.LinAlg: matprod
-    function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractVector{S})
-        TS = promote_op(matprod, T, S)
-        A_mul_B!(zeros(TS, size(H, 1)), H, x)
-    end
-    function (*){T,S}(H::AbstractHierarchicalMatrix{T}, x::AbstractMatrix{S})
-        TS = promote_op(matprod, T, S)
-        A_mul_B!(zeros(TS, size(H, 1), size(x, 2)), H, x)
-    end
+
+import Base.LinAlg: matprod
+function (*)(H::AbstractHierarchicalMatrix{T}, x::AbstractVector{S}) where {T,S}
+    TS = promote_op(matprod, T, S)
+    A_mul_B!(zeros(TS, size(H, 1)), H, x)
 end
+function (*)(H::AbstractHierarchicalMatrix{T}, x::AbstractMatrix{S}) where {T,S}
+    TS = promote_op(matprod, T, S)
+    A_mul_B!(zeros(TS, size(H, 1), size(x, 2)), H, x)
+end
+
 
 Base.A_mul_B!(y::AbstractVecOrMat, H::AbstractHierarchicalMatrix, x::AbstractVecOrMat) = A_mul_B!(y, H, x, 1, 1)
 A_mul_B!(y::AbstractVecOrMat, H::AbstractHierarchicalMatrix, x::AbstractVecOrMat, istart::Int, jstart::Int) = A_mul_B!(y, H, x, istart, jstart, 1, 1)
@@ -116,7 +106,7 @@ end
     return parse(str)
 end
 
-@generated function add_col!{S}(H::HierarchicalMatrix{S}, u::Vector{S}, istart::Int, j::Int)
+@generated function add_col!(H::HierarchicalMatrix{S}, u::Vector{S}, istart::Int, j::Int) where S
     L = length(fieldnames(H))-1
     T = fieldname(H, 1)
     str = "

@@ -5,11 +5,11 @@ A[Block(1),Block(2)]
 ```
 retrieves the 1 x 2 block
 """
-immutable Block
+struct Block
     K::Int
 end
 
-convert{T<:Integer}(::Type{T}, B::Block) = convert(T, B.K)::T
+convert(::Type{T}, B::Block) where T<:Integer = convert(T, B.K)::T
 
 for OP in (:(one), :(zero), :(+), :(-))
     @eval $OP(B::Block) = Block($OP(B.K))

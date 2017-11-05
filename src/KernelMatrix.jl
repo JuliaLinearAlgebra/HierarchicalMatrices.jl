@@ -1,30 +1,20 @@
 @hierarchical KernelMatrix BarycentricMatrix2D Matrix
 
-if VERSION < v"0.6.0-dev.1108" # julia PR #18218
-    import Base.LinAlg: arithtype
-    function (*){T,S}(H::AbstractKernelMatrix{T}, x::AbstractVector{S})
-        TS = promote_op(*, arithtype(T), arithtype(S))
-        A_mul_B!(zeros(TS, size(H, 1)), H, x)
-    end
-    function (*){T,S}(H::AbstractKernelMatrix{T}, x::AbstractMatrix{S})
-        TS = promote_op(*, arithtype(T), arithtype(S))
-        A_mul_B!(zeros(TS, size(H, 1), size(x, 2)), H, x)
-    end
-else
-    import Base.LinAlg: matprod
-    function (*){T,S}(H::AbstractKernelMatrix{T}, x::AbstractVector{S})
-        TS = promote_op(matprod, T, S)
-        A_mul_B!(zeros(TS, size(H, 1)), H, x)
-    end
-    function (*){T,S}(H::AbstractKernelMatrix{T}, x::AbstractMatrix{S})
-        TS = promote_op(matprod, T, S)
-        A_mul_B!(zeros(TS, size(H, 1), size(x, 2)), H, x)
-    end
+
+import Base.LinAlg: matprod
+function (*)(H::AbstractKernelMatrix{T}, x::AbstractVector{S}) where {T,S}
+    TS = promote_op(matprod, T, S)
+    A_mul_B!(zeros(TS, size(H, 1)), H, x)
 end
+function (*)(H::AbstractKernelMatrix{T}, x::AbstractMatrix{S}) where {T,S}
+    TS = promote_op(matprod, T, S)
+    A_mul_B!(zeros(TS, size(H, 1), size(x, 2)), H, x)
+end
+
 
 Base.A_mul_B!(u::Vector, H::AbstractKernelMatrix, v::AbstractVector) = A_mul_B!(u, H, v, 1, 1)
 
-@generated function A_mul_B!{S}(u::Vector{S}, H::KernelMatrix{S}, v::AbstractVector{S}, istart::Int, jstart::Int)
+@generated function A_mul_B!(u::Vector{S}, H::KernelMatrix{S}, v::AbstractVector{S}, istart::Int, jstart::Int) where S
     L = length(fieldnames(H))-1
     T = fieldname(H, 1)
     str = "
@@ -54,9 +44,9 @@ Base.A_mul_B!(u::Vector, H::AbstractKernelMatrix, v::AbstractVector) = A_mul_B!(
     return parse(str)
 end
 
-KernelMatrix{T}(f::Function, x::Vector{T}, y::Vector{T}, a::T, b::T, c::T, d::T) = KernelMatrix(f, x, y, 1:length(x), 1:length(y), a, b, c, d)
+KernelMatrix(f::Function, x::Vector{T}, y::Vector{T}, a::T, b::T, c::T, d::T) where T = KernelMatrix(f, x, y, 1:length(x), 1:length(y), a, b, c, d)
 
-function KernelMatrix{T}(f::Function, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int}, a::T, b::T, c::T, d::T)
+function KernelMatrix(f::Function, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int}, a::T, b::T, c::T, d::T) where T
     ir1, ir2 = indsplit(x, ir, a, b)
     jr1, jr2 = indsplit(y, jr, c, d)
     ab2 = half(T)*(a+b)
@@ -79,7 +69,7 @@ function KernelMatrix{T}(f::Function, x::Vector{T}, y::Vector{T}, ir::UnitRange{
     end
 end
 
-function KernelMatrix1{T}(f::Function, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int}, a::T, b::T, c::T, d::T)
+function KernelMatrix1(f::Function, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int}, a::T, b::T, c::T, d::T) where T
     ir1, ir2 = indsplit(x, ir, a, b)
     jr1, jr2 = indsplit(y, jr, c, d)
     ab2 = half(T)*(a+b)
@@ -102,7 +92,7 @@ function KernelMatrix1{T}(f::Function, x::Vector{T}, y::Vector{T}, ir::UnitRange
     end
 end
 
-function KernelMatrix2{T}(f::Function, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int}, a::T, b::T, c::T, d::T)
+function KernelMatrix2(f::Function, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int}, a::T, b::T, c::T, d::T) where T 
     ir1, ir2 = indsplit(x, ir, a, b)
     jr1, jr2 = indsplit(y, jr, c, d)
     ab2 = half(T)*(a+b)

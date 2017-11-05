@@ -16,7 +16,6 @@ macro hierarchical(HierarchicalType, Types...)
         import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==
         import Base: size, getindex, setindex!
         import Base.LinAlg: Factorization
-        import Compat
 
         import HierarchicalMatrices: add_col!, blocksize, blockgetindex
 
@@ -24,7 +23,7 @@ macro hierarchical(HierarchicalType, Types...)
 
         export $AbstractHierarchicalType, $HierarchicalType, $Factorization
 
-        Compat.@compat abstract type $AbstractHierarchicalType{T} <: AbstractSuperType{T} end
+        abstract type $AbstractHierarchicalType{T} <: AbstractSuperType{T} end
 
         blocksize(H::$AbstractHierarchicalType) = size(H.assigned)
 
@@ -44,12 +43,12 @@ macro hierarchical(HierarchicalType, Types...)
             p, q
         end
 
-        immutable $HierarchicalType{T} <: $AbstractHierarchicalType{T}
+        struct $HierarchicalType{T} <: $AbstractHierarchicalType{T}
             $blocks
             assigned::Matrix{Int}
         end
 
-        @generated function $HierarchicalType{T}(::Type{T}, M::Int, N::Int)
+        @generated function $HierarchicalType(::Type{T}, M::Int, N::Int) where T
             L = length(fieldnames($HierarchicalType))
             HM = $HierarchicalType
             str = VERSION < v"0.6-" ? "$HM(Matrix{$HM}(M, N), " : "$HM(Matrix{$HM{T}}(M, N), "
@@ -66,7 +65,7 @@ macro hierarchical(HierarchicalType, Types...)
         end
         $HierarchicalType(M::Int, N::Int) = $HierarchicalType(Float64, M, N)
 
-        immutable $Factorization{T} <: Factorization{T}
+        struct $Factorization{T} <: Factorization{T}
             $HierarchicalType::$HierarchicalType{T}
             factors::Matrix{Matrix{T}}
         end
@@ -94,7 +93,7 @@ macro hierarchical(HierarchicalType, Types...)
             return parse(str)
         end
 
-        @generated function blockgetindex{S}(H::$HierarchicalType{S}, m::Int, n::Int, i::Int, j::Int)
+        @generated function blockgetindex(H::$HierarchicalType{S}, m::Int, n::Int, i::Int, j::Int) where S
             L = length(fieldnames(H))-1
             T = fieldname(H, 1)
             str = "
@@ -144,7 +143,7 @@ macro hierarchical(HierarchicalType, Types...)
             blockgetindex(H, m, n, i, j)
         end
 
-        @generated function setindex!{S}(H::$HierarchicalType{S}, A::AbstractMatrix{S}, B1::Block, B2::Block)
+        @generated function setindex!(H::$HierarchicalType{S}, A::AbstractMatrix{S}, B1::Block, B2::Block) where S
             L = length(fieldnames(H))-1
             T = fieldname(H, 1)
             str = "
