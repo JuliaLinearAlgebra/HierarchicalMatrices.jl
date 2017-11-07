@@ -1,6 +1,10 @@
 # In this example, we write a simple method to speed up the matrix-vector
-# product of where the matrix is defined by sampling an asymptotically
-# smooth kernel K(x-y):
+# product of a matrix defined by sampling an asymptotically
+# smooth kernel such as:
+#
+# K(x-y) ∼ (x-y)^α  as  x-y → ∞.
+#
+# The kernel is sampled through two vectors x and y:
 #
 # K(x_i-y_j), for 1 ≤ i,j ≤ N
 #
