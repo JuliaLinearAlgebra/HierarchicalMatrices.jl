@@ -41,7 +41,7 @@ Base.A_mul_B!(u::Vector, H::AbstractKernelMatrix, v::AbstractVector) = A_mul_B!(
         end
         return u
     end"
-    return parse(str)
+    return Meta.parse(str)
 end
 
 KernelMatrix(f::Function, x::Vector{T}, y::Vector{T}, a::T, b::T, c::T, d::T) where T = KernelMatrix(f, x, y, 1:length(x), 1:length(y), a, b, c, d)
@@ -92,7 +92,7 @@ function KernelMatrix1(f::Function, x::Vector{T}, y::Vector{T}, ir::UnitRange{In
     end
 end
 
-function KernelMatrix2(f::Function, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int}, a::T, b::T, c::T, d::T) where T 
+function KernelMatrix2(f::Function, x::Vector{T}, y::Vector{T}, ir::UnitRange{Int}, jr::UnitRange{Int}, a::T, b::T, c::T, d::T) where T
     ir1, ir2 = indsplit(x, ir, a, b)
     jr1, jr2 = indsplit(y, jr, c, d)
     ab2 = half(T)*(a+b)

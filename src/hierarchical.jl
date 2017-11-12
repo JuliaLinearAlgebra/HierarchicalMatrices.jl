@@ -10,8 +10,8 @@ macro hierarchical(HierarchicalType, Types...)
             error("Invalid hierarchical symbol.")
         end
     end
-    AbstractHierarchicalType = parse("Abstract"*string(HierarchicalType))
-    Factorization = parse(string(HierarchicalType)*"Factorization")
+    AbstractHierarchicalType = Meta.parse("Abstract"*string(HierarchicalType))
+    Factorization = Meta.parse(string(HierarchicalType)*"Factorization")
     return esc(quote
         import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==
         import Base: size, getindex, setindex!
@@ -61,7 +61,7 @@ macro hierarchical(HierarchicalType, Types...)
                 end
             end
             str *= "zeros(Int, M, N))"
-            return parse(str)
+            return Meta.parse(str)
         end
         $HierarchicalType(M::Int, N::Int) = $HierarchicalType(Float64, M, N)
 
@@ -90,7 +90,7 @@ macro hierarchical(HierarchicalType, Types...)
                 end
                 return 0
             end"
-            return parse(str)
+            return Meta.parse(str)
         end
 
         @generated function blockgetindex(H::$HierarchicalType{S}, m::Int, n::Int, i::Int, j::Int) where S
@@ -111,7 +111,7 @@ macro hierarchical(HierarchicalType, Types...)
                 end
                 return zero(S)
             end"
-            return parse(str)
+            return Meta.parse(str)
         end
 
         function getindex(H::$HierarchicalType, i::Int, j::Int)
@@ -165,7 +165,7 @@ macro hierarchical(HierarchicalType, Types...)
                 end
                 return H
             end"
-            return parse(str)
+            return Meta.parse(str)
         end
 
         @generated function (+)(G::$HierarchicalType, H::$HierarchicalType)
@@ -193,7 +193,7 @@ macro hierarchical(HierarchicalType, Types...)
                 end
                 return F
             end"
-            return parse(str)
+            return Meta.parse(str)
         end
 
         @generated function (-)(G::$HierarchicalType, H::$HierarchicalType)
@@ -221,7 +221,7 @@ macro hierarchical(HierarchicalType, Types...)
                 end
                 return F
             end"
-            return parse(str)
+            return Meta.parse(str)
         end
     end)
 end
