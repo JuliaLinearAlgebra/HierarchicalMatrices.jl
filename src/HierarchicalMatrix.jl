@@ -47,7 +47,7 @@ add_col!(H::AbstractHierarchicalMatrix, u::Vector, j::Int) = add_col!(H, u, 1, j
         end
         return y
     end"
-    return parse(str)
+    return Meta.parse(str)
 end
 
 @generated function scale!(H::HierarchicalMatrix, b::AbstractVector, jstart::Int)
@@ -75,7 +75,7 @@ end
         end
         return H
     end"
-    return parse(str)
+    return Meta.parse(str)
 end
 
 @generated function scale!(b::AbstractVector, H::HierarchicalMatrix, istart::Int)
@@ -103,7 +103,7 @@ end
         end
         return H
     end"
-    return parse(str)
+    return Meta.parse(str)
 end
 
 @generated function add_col!(H::HierarchicalMatrix{S}, u::Vector{S}, istart::Int, j::Int) where S
@@ -141,5 +141,5 @@ end
         end
         return H
     end"
-    return parse(str)
+    return Meta.parse(str)
 end
