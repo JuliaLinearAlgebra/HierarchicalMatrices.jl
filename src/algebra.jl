@@ -110,9 +110,9 @@ end
 
 # BLAS'ed
 if VERSION < v"0.7-"
-    include("blas06.jl")
+    #include("blas06.jl")
 else
-    include("blas.jl")
+    #include("blas.jl")
 end
 
 # BarycentricMatrix
