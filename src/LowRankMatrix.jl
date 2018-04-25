@@ -1,3 +1,21 @@
+struct ThreadSafeVector{T} <: AbstractVector{T}
+    V::Matrix{T}
+    function ThreadSafeVector{T}(V::Matrix{T}) where T
+        @assert size(V, 2) == Threads.nthreads()
+        new{T}(V)
+    end
+end
+
+ThreadSafeVector(V::Matrix) = ThreadSafeVector{eltype(V)}(V)
+ThreadSafeVector(v::Vector) = ThreadSafeVector(repmat(v, 1, Threads.nthreads()))
+
+@inline size(v::ThreadSafeVector) = (size(v.V, 1), )
+@inline getindex(v::ThreadSafeVector{T}, i::Integer) where T = v.V[i, Threads.threadid()]
+@inline setindex!(v::ThreadSafeVector{T}, x, i::Integer) where T = v.V[i, Threads.threadid()] = x
+
+threadsafezeros(::Type{T}, n::Integer) where T = ThreadSafeVector{T}(zeros(T, n, Threads.nthreads()))
+threadsafeones(::Type{T}, n::Integer) where T = ThreadSafeVector{T}(ones(T, n, Threads.nthreads()))
+
 abstract type AbstractLowRankMatrix{T} <: AbstractMatrix{T} end
 
 """
@@ -10,10 +28,10 @@ struct LowRankMatrix{T} <: AbstractLowRankMatrix{T}
     U::Matrix{T}
     Σ::Diagonal{T}
     V::Matrix{T}
-    temp::Vector{T}
+    temp::ThreadSafeVector{T}
 end
 
-LowRankMatrix(U::Matrix{T}, Σ::Diagonal{T}, V::Matrix{T}) where T = LowRankMatrix(U, Σ, V, zero(Σ.diag))
+LowRankMatrix(U::Matrix{T}, Σ::Diagonal{T}, V::Matrix{T}) where T = LowRankMatrix(U, Σ, V, threadedzeros(T, length(Σ.diag)))
 
 size(L::LowRankMatrix) = size(L.U, 1), size(L.V, 1)
 rank(L::LowRankMatrix) = length(L.Σ.diag)
