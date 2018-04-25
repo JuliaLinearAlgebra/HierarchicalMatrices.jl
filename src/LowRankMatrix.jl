@@ -31,7 +31,7 @@ struct LowRankMatrix{T} <: AbstractLowRankMatrix{T}
     temp::ThreadSafeVector{T}
 end
 
-LowRankMatrix(U::Matrix{T}, Σ::Diagonal{T}, V::Matrix{T}) where T = LowRankMatrix(U, Σ, V, threadedzeros(T, length(Σ.diag)))
+LowRankMatrix(U::Matrix{T}, Σ::Diagonal{T}, V::Matrix{T}) where T = LowRankMatrix(U, Σ, V, threadsafezeros(T, length(Σ.diag)))
 
 size(L::LowRankMatrix) = size(L.U, 1), size(L.V, 1)
 rank(L::LowRankMatrix) = length(L.Σ.diag)
