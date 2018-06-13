@@ -1,5 +1,5 @@
 using HierarchicalMatrices
-using Compat.Test
+using Compat.Test, Compat.LinearAlgebra, Compat.Random
 
 
 for r in map(BLOCKRANK, subtypes(AbstractFloat))

@@ -1,16 +1,19 @@
 __precompile__()
 module HierarchicalMatrices
+    using Compat, Compat.LinearAlgebra
+
     BLOCKRANK(T::Type{R}) where {R<:Real} = 2round(Int, half(T)*log(3+sqrt(T(8)), inv(eps(T))))
     BLOCKRANK(T::Type{C}) where {C<:Complex} = BLOCKRANK(real(T))
     BLOCKSIZE(T) = 4BLOCKRANK(T)
 
-    import Base: size, rank, norm, cond, istriu, istril, issymmetric, ishermitian, convert, view
-    import Base: copy, getindex, setindex!, show, transpose, ctranspose, one, zero, inv, isless
+    import Base: convert, view, size
+    import Base: copy, getindex, setindex!, show, one, zero, inv, isless
     import Base: div, rem
     import Base: broadcast, scale!, Matrix, promote_op
     import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==, !=
-    import Base.LinAlg: Factorization, BlasInt, BlasFloat, BlasReal, BlasComplex
-    import Base.BLAS: @blasfunc, libblas
+    import Compat.LinearAlgebra: Factorization, rank, norm, cond, istriu, istril, issymmetric, ishermitian,
+                                   transpose, adjoint
+    import Compat.LinearAlgebra.BLAS: @blasfunc, libblas, BlasInt, BlasFloat, BlasReal, BlasComplex
 
     export BLOCKSIZE, BLOCKRANK, Block
     export AbstractLowRankMatrix, AbstractBarycentricMatrix

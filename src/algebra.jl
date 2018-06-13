@@ -298,7 +298,7 @@ end
 
 function add_col(A::Matrix{T}, u::Vector{T}, istart::Int, j::Int) where T<:BlasReal
     m, n = size(A, 1), size(A, 2)
-    B = Matrix{T}(m, n)
+    B = Matrix{T}(undef, m, n)
     BLAS.blascopy!(m*n, A, 1, B, 1)
     BLAS.axpy!(m, one(T), pointer(u, istart), 1, pointer(B, (j-1)*m+1), 1)
     B
@@ -319,7 +319,7 @@ end
 function add_col(L::LowRankMatrix{T}, u::Vector{T}, istart::Int, j::Int) where T<:BlasReal
     U, Σ, V = L.U, L.Σ, L.V
     m, n, r, un = size(L, 1), size(L, 2), rank(L), one(T)
-    U1 = Matrix{T}(m, r+1)
+    U1 = Matrix{T}(undef, m, r+1)
     BLAS.blascopy!(m, pointer(u, istart), 1, U1, 1)
     BLAS.blascopy!(m*r, U, 1, pointer(U1, m+1), 1)
     diag = Vector{T}(r+1)
