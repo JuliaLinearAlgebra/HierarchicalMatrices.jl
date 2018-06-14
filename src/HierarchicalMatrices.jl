@@ -12,7 +12,8 @@ module HierarchicalMatrices
     import Base: broadcast, scale!, Matrix, promote_op
     import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==, !=
     import Compat.LinearAlgebra: Factorization, rank, norm, cond, istriu, istril, issymmetric, ishermitian,
-                                   transpose, adjoint
+                                   transpose
+    import Compat: adjoint                                 
     import Compat.LinearAlgebra.BLAS: @blasfunc, libblas, BlasInt, BlasFloat, BlasReal, BlasComplex
 
     export BLOCKSIZE, BLOCKRANK, Block
