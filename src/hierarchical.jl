@@ -18,6 +18,7 @@ macro hierarchical(HierarchicalType, Types...)
     return esc(quote
         import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==
         import Base: size, getindex, setindex!
+        import Compat: undef
         import Compat.LinearAlgebra: Factorization
 
         # import HierarchicalMatrices:
