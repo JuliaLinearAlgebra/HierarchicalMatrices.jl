@@ -1,3 +1,6 @@
+function blocksize end
+function blockgetindex end
+
 macro hierarchical(HierarchicalType, Types...)
     blocks = :(begin end)
     push!(blocks.args, :($(Symbol("$(HierarchicalType)blocks"))::Matrix{$HierarchicalType{T}}))
@@ -15,9 +18,9 @@ macro hierarchical(HierarchicalType, Types...)
     return esc(quote
         import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==
         import Base: size, getindex, setindex!
-        import Base.LinAlg: Factorization
+        import Compat.LinearAlgebra: Factorization
 
-        import HierarchicalMatrices: add_col!, blocksize, blockgetindex
+        # import HierarchicalMatrices:
 
         AbstractSuperType = promote_type([typeof($Types[i]) == Symbol ? eval($Types[i]) : eval($Types[i].args[1]) for i in 1:length($Types)]...)
 
@@ -25,19 +28,19 @@ macro hierarchical(HierarchicalType, Types...)
 
         abstract type $AbstractHierarchicalType{T} <: AbstractSuperType{T} end
 
-        blocksize(H::$AbstractHierarchicalType) = size(H.assigned)
+        HierarchicalMatrices.blocksize(H::$AbstractHierarchicalType) = size(H.assigned)
 
         function size(H::$AbstractHierarchicalType)
-            M, N = blocksize(H)
+            M, N = HierarchicalMatrices.blocksize(H)
 
             p = 0
             for m = 1:M
-                p += blocksize(H, m, N, 1)
+                p += HierarchicalMatrices.blocksize(H, m, N, 1)
             end
 
             q = 0
             for n = 1:N
-                q += blocksize(H, 1, n, 2)
+                q += HierarchicalMatrices.blocksize(H, 1, n, 2)
             end
 
             p, q
@@ -51,13 +54,13 @@ macro hierarchical(HierarchicalType, Types...)
         @generated function $HierarchicalType(::Type{T}, M::Int, N::Int) where T
             L = length(fieldnames($HierarchicalType))
             HM = $HierarchicalType
-            str = VERSION < v"0.6-" ? "$HM(Matrix{$HM}(M, N), " : "$HM(Matrix{$HM{T}}(M, N), "
+            str = VERSION < v"0.6-" ? "$HM(Matrix{$HM}(undef, M, N), " : "$HM(Matrix{$HM{T}}(undef, M, N), "
             for l in 2:L-1
                 S = $Types[l-1]
                 if typeof(S) == Symbol
-                    str *= "Matrix{$S{T}}(M, N), "
+                    str *= "Matrix{$S{T}}(undef, M, N), "
                 else
-                    str *= "Matrix{$(S.args[1]){T, $(S.args[2]){T}}}(M, N), "
+                    str *= "Matrix{$(S.args[1]){T, $(S.args[2]){T}}}(undef, M, N), "
                 end
             end
             str *= "zeros(Int, M, N))"
@@ -70,9 +73,9 @@ macro hierarchical(HierarchicalType, Types...)
             factors::Matrix{Matrix{T}}
         end
 
-        blocksize(H::$HierarchicalType, m::Int, n::Int) = blocksize(H, m, n, 1), blocksize(H, m, n, 2)
+        HierarchicalMatrices.blocksize(H::$HierarchicalType, m::Int, n::Int) = HierarchicalMatrices.blocksize(H, m, n, 1), HierarchicalMatrices.blocksize(H, m, n, 2)
 
-        @generated function blocksize(H::$HierarchicalType, m::Int, n::Int, k::Int)
+        @generated function HierarchicalMatrices.blocksize(H::$HierarchicalType, m::Int, n::Int, k::Int)
             L = length(fieldnames(H))-1
             T = fieldname(H, 1)
             str = "
@@ -93,7 +96,7 @@ macro hierarchical(HierarchicalType, Types...)
             return Meta.parse(str)
         end
 
-        @generated function blockgetindex(H::$HierarchicalType{S}, m::Int, n::Int, i::Int, j::Int) where S
+        @generated function HierarchicalMatrices.blockgetindex(H::$HierarchicalType{S}, m::Int, n::Int, i::Int, j::Int) where S
             L = length(fieldnames(H))-1
             T = fieldname(H, 1)
             str = "
@@ -116,11 +119,11 @@ macro hierarchical(HierarchicalType, Types...)
 
         function getindex(H::$HierarchicalType, i::Int, j::Int)
             p, q = size(H)
-            M, N = blocksize(H)
+            M, N = HierarchicalMatrices.blocksize(H)
 
             m = 1
             while m ≤ M
-                r = blocksize(H, m, N, 1)
+                r = HierarchicalMatrices.blocksize(H, m, N, 1)
                 if i > r
                     i -= r
                     m += 1
@@ -131,7 +134,7 @@ macro hierarchical(HierarchicalType, Types...)
 
             n = 1
             while n ≤ N
-                s = blocksize(H, 1, n, 2)
+                s = HierarchicalMatrices.blocksize(H, 1, n, 2)
                 if j > s
                     j -= s
                     n += 1
@@ -140,7 +143,7 @@ macro hierarchical(HierarchicalType, Types...)
                 end
             end
 
-            blockgetindex(H, m, n, i, j)
+            HierarchicalMatrices.blockgetindex(H, m, n, i, j)
         end
 
         @generated function setindex!(H::$HierarchicalType{S}, A::AbstractMatrix{S}, B1::Block, B2::Block) where S
@@ -174,7 +177,7 @@ macro hierarchical(HierarchicalType, Types...)
             str = "
             begin
                 F = deepcopy(G)
-                M, N = blocksize(H)
+                M, N = HierarchicalMatrices.blocksize(H)
                 for m = 1:M
                     for n = 1:N
                         Gmn = G.assigned[m,n]
@@ -202,7 +205,7 @@ macro hierarchical(HierarchicalType, Types...)
             str = "
             begin
                 F = deepcopy(G)
-                M, N = blocksize(H)
+                M, N = HierarchicalMatrices.blocksize(H)
                 for m = 1:M
                     for n = 1:N
                         Gmn = G.assigned[m,n]

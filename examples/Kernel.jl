@@ -37,7 +37,7 @@ using HierarchicalMatrices
 @inline logkernel(x::T, y::T) where T = log(abs(x-y))
 
 for f in (:cauchykernel, :coulombkernel, :coulombprimekernel, :logkernel)
-    @eval $f(x::Vector{T}, y::Vector{T}) where T = T[$f(x, y) for x in x, y in y]
+    @eval $f(X::Vector{T}, Y::Vector{T}) where T = T[$f(x, y) for x in X, y in Y]
 end
 
 #

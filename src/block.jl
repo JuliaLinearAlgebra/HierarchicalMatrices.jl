@@ -1,4 +1,4 @@
-doc"""
+"""
 `Block` is used for get index of a block matrix.  For example,
 ```julia
 A[Block(1),Block(2)]

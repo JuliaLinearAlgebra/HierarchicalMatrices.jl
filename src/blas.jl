@@ -1,4 +1,4 @@
-for (f!, char) in ((:A_mul_B!,  'N'),
+for (f!, char) in ((:mul!,  'N'),
                    (:At_mul_B!, 'T'),
                    (:Ac_mul_B!, 'C'))
     for (fname, elty) in ((:dgemv_, :Float64),
@@ -28,7 +28,7 @@ for (fname, elty) in ((:dgemv_,:Float64),
                       (:zgemv_,:Complex128),
                       (:cgemv_,:Complex64))
     @eval begin
-        function A_mul_B!(y::VecOrMat{$elty}, L::LowRankMatrix{$elty}, x::VecOrMat{$elty}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
+        function mul!(y::VecOrMat{$elty}, L::LowRankMatrix{$elty}, x::VecOrMat{$elty}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
             fill!(L.temp, zero($elty))
             ccall((@blasfunc($fname), libblas), Void,
                 (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
@@ -58,7 +58,7 @@ for (fname, elty) in ((:dgemv_,:Float64),
                       (:zgemv_,:Complex128),
                       (:cgemv_,:Complex64))
     @eval begin
-        function A_mul_B!(u::Vector{$elty}, B::BarycentricMatrix2D{$elty}, v::Vector{$elty}, istart::Int, jstart::Int)
+        function mul!(u::Vector{$elty}, B::BarycentricMatrix2D{$elty}, v::Vector{$elty}, istart::Int, jstart::Int)
             fill!(B.temp1, zero($elty))
             ccall((@blasfunc($fname), libblas), Void,
                 (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
