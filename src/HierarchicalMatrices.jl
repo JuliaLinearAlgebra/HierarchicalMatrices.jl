@@ -9,11 +9,11 @@ module HierarchicalMatrices
     import Base: convert, view, size
     import Base: copy, getindex, setindex!, show, one, zero, inv, isless
     import Base: div, rem
-    import Base: broadcast, scale!, Matrix, promote_op
+    import Base: broadcast, Matrix, promote_op
     import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==, !=
     import Compat.LinearAlgebra: Factorization, rank, norm, cond, istriu, istril, issymmetric, ishermitian,
                                    transpose
-    import Compat: adjoint                                 
+    import Compat: adjoint
     import Compat.LinearAlgebra.BLAS: @blasfunc, libblas, BlasInt, BlasFloat, BlasReal, BlasComplex
 
     export BLOCKSIZE, BLOCKRANK, Block
@@ -36,11 +36,17 @@ module HierarchicalMatrices
     two(x::Number) = oftype(x,2)
     two(::Type{T}) where {T<:Number} = convert(T, 2)
 
-    for op in (:A_mul_B!, :At_mul_B!, :Ac_mul_B!, :scale!)
-        @eval begin
-            $op(args...) = Base.$op(args...)
+    if VERSION < v"0.7-"
+        mul!(args...) = Base.A_mul_B!(args...)
+        for op in (:At_mul_B!, :Ac_mul_B!, :scale!)
+            @eval begin
+                $op(args...) = Base.$op(args...)
+            end
         end
+    else
+        mul!(args...) = LinearAlgebra.mul!(args...)
     end
+
 
     include("LowRankMatrix.jl")
     include("BarycentricMatrix.jl")

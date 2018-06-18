@@ -1,20 +1,23 @@
 @hierarchical KernelMatrix BarycentricMatrix2D Matrix
 
 
-import Base.LinAlg: matprod
+import Compat.LinearAlgebra: matprod
 function (*)(H::AbstractKernelMatrix{T}, x::AbstractVector{S}) where {T,S}
     TS = promote_op(matprod, T, S)
-    A_mul_B!(zeros(TS, size(H, 1)), H, x)
+    mul!(zeros(TS, size(H, 1)), H, x)
 end
 function (*)(H::AbstractKernelMatrix{T}, x::AbstractMatrix{S}) where {T,S}
     TS = promote_op(matprod, T, S)
-    A_mul_B!(zeros(TS, size(H, 1), size(x, 2)), H, x)
+    mul!(zeros(TS, size(H, 1), size(x, 2)), H, x)
 end
 
+if VERSION < v"0.7-"
+    Base.A_mul_B!(u::Vector, H::AbstractKernelMatrix, v::AbstractVector) = mul!(u, H, v, 1, 1)
+else
+    LinearAlgebra.mul!(u::Vector, H::AbstractKernelMatrix, v::AbstractVector) = mul!(u, H, v, 1, 1)
+end
 
-Base.A_mul_B!(u::Vector, H::AbstractKernelMatrix, v::AbstractVector) = A_mul_B!(u, H, v, 1, 1)
-
-@generated function A_mul_B!(u::Vector{S}, H::KernelMatrix{S}, v::AbstractVector{S}, istart::Int, jstart::Int) where S
+@generated function mul!(u::Vector{S}, H::KernelMatrix{S}, v::AbstractVector{S}, istart::Int, jstart::Int) where S
     L = length(fieldnames(H))-1
     T = fieldname(H, 1)
     str = "
@@ -26,12 +29,12 @@ Base.A_mul_B!(u::Vector, H::AbstractKernelMatrix, v::AbstractVector) = A_mul_B!(
             for n = 1:N
                 Hmn = H.assigned[m,n]
                 if Hmn == 1
-                    A_mul_B!(u, getindex(H.$T, m, n), v, istart + p, jstart + q)"
+                    mul!(u, getindex(H.$T, m, n), v, istart + p, jstart + q)"
     for l in 2:L
         T = fieldname(H, l)
         str *= "
                 elseif Hmn == $l
-                    A_mul_B!(u, getindex(H.$T, m, n), v, istart + p, jstart + q)"
+                    mul!(u, getindex(H.$T, m, n), v, istart + p, jstart + q)"
     end
     str *= "
                 end

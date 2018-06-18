@@ -23,7 +23,7 @@ for op in (:(+),:(-))
 end
 
 
-# This file implements A_mul_B! overrides when A is a small matrix and u and v
+# This file implements mul! overrides when A is a small matrix and u and v
 # are larger vectors, but we want to operate in-place, equivalent to:
 #
 # u[istart:istart+size(A, 1)-1] += A*v[jstart:jstart+size(A, 2)-1]
@@ -31,10 +31,10 @@ end
 
 # Generic Matrix
 
-A_mul_B!(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int)  where T =
-    A_mul_B!(y, A, x, istart, jstart, 1, 1)
+mul!(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int)  where T =
+    mul!(y, A, x, istart, jstart, 1, 1)
 
-function A_mul_B!(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int) where T
+function mul!(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int) where T
     m, n = size(A)
     ishift, jshift = istart-INCY, jstart-INCX
     @inbounds for j = 1:n
@@ -82,10 +82,10 @@ end
 
 # LowRankMatrix
 
-A_mul_B!(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T}) where T = A_mul_B!(y, L, x, 1, 1)
-A_mul_B!(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) where T = A_mul_B!(y, L, x, istart, jstart, 1, 1)
+mul!(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T}) where T = mul!(y, L, x, 1, 1)
+mul!(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) where T = mul!(y, L, x, istart, jstart, 1, 1)
 
-function A_mul_B!(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int) where T
+function mul!(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int) where T
     m, n = size(L)
     ishift, jshift = istart-INCY, jstart-INCX
     temp = L.temp
@@ -117,9 +117,9 @@ end
 
 # BarycentricMatrix
 
-A_mul_B!(u::Vector{T}, A::AbstractBarycentricMatrix{T}, v::AbstractVector{T}) where T = A_mul_B!(u, A, v, 1, 1)
+mul!(u::Vector{T}, A::AbstractBarycentricMatrix{T}, v::AbstractVector{T}) where T = mul!(u, A, v, 1, 1)
 
-function A_mul_B!(u::Vector{T}, B::EvenBarycentricMatrix{T}, v::AbstractVector{T}, istart::Int, jstart::Int) where T
+function mul!(u::Vector{T}, B::EvenBarycentricMatrix{T}, v::AbstractVector{T}, istart::Int, jstart::Int) where T
     β, W, F = B.β, B.W, B.F
     ishift, jshift, n = istart-1, jstart-1, length(β)
 
@@ -194,7 +194,7 @@ end
 
 # BarycentricMatrix2D
 
-function A_mul_B!(u::Vector{T}, B::BarycentricMatrix2D{T}, v::AbstractVector{T}, istart::Int, jstart::Int) where T
+function mul!(u::Vector{T}, B::BarycentricMatrix2D{T}, v::AbstractVector{T}, istart::Int, jstart::Int) where T
     U, F, V, temp1, temp2 = B.U, B.B.F, B.V, B.temp1, B.temp2
     ishift, jshift, r = istart-1, jstart-1, length(temp1)
 

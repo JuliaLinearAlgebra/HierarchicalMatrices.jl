@@ -1,5 +1,5 @@
 using HierarchicalMatrices
-using Compat.Test, Compat.LinearAlgebra, Compat.Random
+using Compat.Test, Compat.LinearAlgebra, Compat.Random, Compat.InteractiveUtils
 
 
 for r in map(BLOCKRANK, subtypes(AbstractFloat))
@@ -15,11 +15,11 @@ for T in (Float32, Float64)
     x = rand(T, 40)
 
     y = zero(x)
-    HierarchicalMatrices.A_mul_B!(y, A, x, 1, 1)
+    HierarchicalMatrices.mul!(y, A, x, 1, 1)
     @test norm(y[1:10] - A*x[1:5]) ≤ eps(T)*norm(A*x[1:5])
 
     fill!(y, 0.0)
-    HierarchicalMatrices.A_mul_B!(y, A, x, 5, 5, 2, 2)
+    HierarchicalMatrices.mul!(y, A, x, 5, 5, 2, 2)
     @test norm(y[5:2:23] - A*x[5:2:14]) ≤ eps(T)*norm(A*x[5:2:14])
 
     fill!(y, 0.0)
@@ -34,11 +34,11 @@ for T in (Float32, Float64)
     x = map(big, x)
 
     y = zero(x)
-    HierarchicalMatrices.A_mul_B!(y, A, x, 1, 1)
+    HierarchicalMatrices.mul!(y, A, x, 1, 1)
     @test y[1:10] == A*x[1:5]
 
     fill!(y, 0.0)
-    HierarchicalMatrices.A_mul_B!(y, A, x, 5, 5, 2, 2)
+    HierarchicalMatrices.mul!(y, A, x, 5, 5, 2, 2)
     @test y[5:2:23] == A*x[5:2:14]
 
     fill!(y, 0.0)
