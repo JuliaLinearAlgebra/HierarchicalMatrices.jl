@@ -47,6 +47,7 @@ module HierarchicalMatrices
         mul!(args...) = LinearAlgebra.mul!(args...)
     end
 
+    const A_mul_B! = mul!
 
     include("LowRankMatrix.jl")
     include("BarycentricMatrix.jl")
