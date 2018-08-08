@@ -6,7 +6,11 @@ for r in map(BLOCKRANK, subtypes(AbstractFloat))
     @test iseven(r)
 end
 
-srand(0)
+if VERSION < v"0.7"
+    srand(0)
+else
+    Random.seed!(0)
+end
 
 @hierarchical UpperTriangularHierarchicalMatrix Matrix (UpperTriangular, LowRankMatrix) Diagonal
 
