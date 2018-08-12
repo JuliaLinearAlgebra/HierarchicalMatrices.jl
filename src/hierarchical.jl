@@ -16,7 +16,7 @@ macro hierarchical(HierarchicalType, Types...)
     AbstractHierarchicalType = Meta.parse("Abstract"*string(HierarchicalType))
     Factorization = Meta.parse(string(HierarchicalType)*"Factorization")
     return esc(quote
-        import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==
+        import Base: +, -, *, /, \, ==
         import Base: size, getindex, setindex!
         import Compat: undef
         import Compat.LinearAlgebra: Factorization

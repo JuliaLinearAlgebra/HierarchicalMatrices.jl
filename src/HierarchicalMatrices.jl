@@ -10,7 +10,7 @@ module HierarchicalMatrices
     import Base: copy, getindex, setindex!, show, one, zero, inv, isless
     import Base: div, rem
     import Base: broadcast, Matrix, promote_op
-    import Base: +, -, *, /, \, .+, .-, .*, ./, .\, ==, !=
+    import Base: +, -, *, /, \, ==, !=
     import Compat.LinearAlgebra: Factorization, rank, norm, cond, istriu, istril, issymmetric, ishermitian,
                                    transpose
     import Compat: adjoint
