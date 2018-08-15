@@ -18,18 +18,36 @@ threadsafeones(::Type{T}, n::Integer) where T = ThreadSafeVector{T}(ones(T, n, T
 
 abstract type AbstractLowRankMatrix{T} <: AbstractMatrix{T} end
 
-"""
-Store the singular value decomposition of a matrix:
+if VERSION < v"0.7-"
+    """
+    Store the singular value decomposition of a matrix:
 
-    A = UΣV'
+        A = UΣV'
 
-"""
-struct LowRankMatrix{T} <: AbstractLowRankMatrix{T}
-    U::Matrix{T}
-    Σ::Diagonal{T}
-    V::Matrix{T}
-    temp::ThreadSafeVector{T}
+    """
+    struct LowRankMatrix{T} <: AbstractLowRankMatrix{T}
+        U::Matrix{T}
+        Σ::Diagonal{T}
+        V::Matrix{T}
+        temp::ThreadSafeVector{T}
+    end
+else
+    """
+    Store the singular value decomposition of a matrix:
+
+        A = UΣV'
+
+    """
+    struct LowRankMatrix{T} <: AbstractLowRankMatrix{T}
+        U::Matrix{T}
+        Σ::Diagonal{T, Vector{T}}
+        V::Matrix{T}
+        temp::ThreadSafeVector{T}
+    end
 end
+
+
+
 
 LowRankMatrix(U::Matrix{T}, Σ::Diagonal{T}, V::Matrix{T}) where T = LowRankMatrix(U, Σ, V, threadsafezeros(T, length(Σ.diag)))
 
