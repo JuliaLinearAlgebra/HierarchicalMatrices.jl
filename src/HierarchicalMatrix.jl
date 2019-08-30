@@ -1,7 +1,7 @@
 @hierarchical HierarchicalMatrix LowRankMatrix Matrix
 
 
-import Compat.LinearAlgebra: matprod
+import LinearAlgebra: matprod
 function (*)(H::AbstractHierarchicalMatrix{T}, x::AbstractVector{S}) where {T,S}
     TS = promote_op(matprod, T, S)
     mul!(zeros(TS, size(H, 1)), H, x)
@@ -11,17 +11,10 @@ function (*)(H::AbstractHierarchicalMatrix{T}, x::AbstractMatrix{S}) where {T,S}
     mul!(zeros(TS, size(H, 1), size(x, 2)), H, x)
 end
 
+LinearAlgebra.mul!(y::AbstractVecOrMat, H::AbstractHierarchicalMatrix, x::AbstractVecOrMat) = mul!(y, H, x, 1, 1)
+LinearAlgebra.rmul!(H::AbstractHierarchicalMatrix, b::Diagonal) = scale!(H, b.diag, 1)
+LinearAlgebra.lmul!(b::Diagonal, H::AbstractHierarchicalMatrix) = scale!(b.diag, H, 1)
 
-if VERSION < v"0.7-"
-    Base.A_mul_B!(y::AbstractVecOrMat, H::AbstractHierarchicalMatrix, x::AbstractVecOrMat) = mul!(y, H, x, 1, 1)
-    Base.scale!(H::AbstractHierarchicalMatrix, b::AbstractVector) = scale!(H, b, 1)
-    Base.scale!(b::AbstractVector, H::AbstractHierarchicalMatrix) = scale!(b, H, 1)
-else
-    LinearAlgebra.mul!(y::AbstractVecOrMat, H::AbstractHierarchicalMatrix, x::AbstractVecOrMat) = mul!(y, H, x, 1, 1)
-    LinearAlgebra.rmul!(H::AbstractHierarchicalMatrix, b::Diagonal) = scale!(H, b.diag, 1)
-    LinearAlgebra.lmul!(b::Diagonal, H::AbstractHierarchicalMatrix) = scale!(b.diag, H, 1)
-
-end
 
 mul!(y::AbstractVecOrMat, H::AbstractHierarchicalMatrix, x::AbstractVecOrMat, istart::Int, jstart::Int) = mul!(y, H, x, istart, jstart, 1, 1)
 

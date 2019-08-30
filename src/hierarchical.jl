@@ -18,8 +18,7 @@ macro hierarchical(HierarchicalType, Types...)
     return esc(quote
         import Base: +, -, *, /, \, ==
         import Base: size, getindex, setindex!
-        import Compat: undef
-        import Compat.LinearAlgebra: Factorization
+        import LinearAlgebra: Factorization
 
         # import HierarchicalMatrices:
 
@@ -55,7 +54,7 @@ macro hierarchical(HierarchicalType, Types...)
         @generated function $HierarchicalType(::Type{T}, M::Int, N::Int) where T
             L = length(fieldnames($HierarchicalType))
             HM = $HierarchicalType
-            str = VERSION < v"0.6-" ? "$HM(Matrix{$HM}(undef, M, N), " : "$HM(Matrix{$HM{T}}(undef, M, N), "
+            str = "$HM(Matrix{$HM{T}}(undef, M, N), "
             for l in 2:L-1
                 S = $Types[l-1]
                 if typeof(S) == Symbol

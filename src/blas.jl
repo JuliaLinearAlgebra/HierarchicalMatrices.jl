@@ -1,36 +1,52 @@
-for (f!, char) in ((:mul!,  'N'),
-                   (:At_mul_B!, 'T'),
-                   (:Ac_mul_B!, 'C'))
-    for (fname, elty) in ((:dgemv_, :Float64),
-                          (:sgemv_, :Float32),
-                          (:zgemv_, :Complex128),
-                          (:cgemv_, :Complex64))
-        @eval begin
-            function $f!(y::VecOrMat{$elty}, A::Matrix{$elty}, x::VecOrMat{$elty}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
-                ccall((@blasfunc($fname), libblas), Void,
-                    (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
-                     Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
-                     Ref{$elty}, Ptr{$elty}, Ref{BlasInt}),
-                     $char, size(A,1), size(A,2), $elty(1.0),
-                     A, max(1,stride(A,2)), pointer(x, jstart), INCX,
-                     $elty(1.0), pointer(y, istart), INCY)
-                 y
-            end
+for (fname, elty) in ((:dgemv_, :Float64),
+                        (:sgemv_, :Float32),
+                        (:zgemv_, :ComplexF64),
+                        (:cgemv_, :ComplexF32))
+    @eval begin
+        function mul!(y::VecOrMat{$elty}, A::Matrix{$elty}, x::VecOrMat{$elty}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
+            ccall((@blasfunc($fname), libblas), Nothing,
+                (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
+                    Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                    Ref{$elty}, Ptr{$elty}, Ref{BlasInt}),
+                    'N', size(A,1), size(A,2), $elty(1.0),
+                    A, max(1,stride(A,2)), pointer(x, jstart), INCX,
+                    $elty(1.0), pointer(y, istart), INCY)
+            y
         end
+        function mul!(y::VecOrMat{$elty}, At::Transpose{$elty,Matrix{$elty}}, x::VecOrMat{$elty}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
+            A = parent(At)
+            ccall((@blasfunc($fname), libblas), Nothing,
+                (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
+                    Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                    Ref{$elty}, Ptr{$elty}, Ref{BlasInt}),
+                    'T', size(A,1), size(A,2), $elty(1.0),
+                    A, max(1,stride(A,2)), pointer(x, jstart), INCX,
+                    $elty(1.0), pointer(y, istart), INCY)
+            y
+        end
+        function mul!(y::VecOrMat{$elty}, Ac::Adjoint{$elty,Matrix{$elty}}, x::VecOrMat{$elty}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
+            A = parent(Ac)
+            ccall((@blasfunc($fname), libblas), Nothing,
+                (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
+                    Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                    Ref{$elty}, Ptr{$elty}, Ref{BlasInt}),
+                    'C', size(A,1), size(A,2), $elty(1.0),
+                    A, max(1,stride(A,2)), pointer(x, jstart), INCX,
+                    $elty(1.0), pointer(y, istart), INCY)
+            y
+        end        
     end
 end
 
 
-
-
 for (fname, elty) in ((:dgemv_,:Float64),
                       (:sgemv_,:Float32),
-                      (:zgemv_,:Complex128),
-                      (:cgemv_,:Complex64))
+                      (:zgemv_,:ComplexF64),
+                      (:cgemv_,:ComplexF32))
     @eval begin
         function mul!(y::VecOrMat{$elty}, L::LowRankMatrix{$elty}, x::VecOrMat{$elty}, istart::Int, jstart::Int, INCX::Int, INCY::Int)
             fill!(L.temp, zero($elty))
-            ccall((@blasfunc($fname), libblas), Void,
+            ccall((@blasfunc($fname), libblas), Nothing,
                 (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
                  Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
                  Ref{$elty}, Ptr{$elty}, Ref{BlasInt}),
@@ -38,7 +54,7 @@ for (fname, elty) in ((:dgemv_,:Float64),
                  L.V, max(1,stride(L.V,2)), pointer(x, jstart), INCX,
                  $elty(1.0), L.temp, 1)
             unsafe_broadcasttimes!(L.temp, L.Σ.diag)
-            ccall((@blasfunc($fname), libblas), Void,
+            ccall((@blasfunc($fname), libblas), Nothing,
                 (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
                  Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
                  Ref{$elty}, Ptr{$elty}, Ref{BlasInt}),
@@ -55,12 +71,12 @@ end
 
 for (fname, elty) in ((:dgemv_,:Float64),
                       (:sgemv_,:Float32),
-                      (:zgemv_,:Complex128),
-                      (:cgemv_,:Complex64))
+                      (:zgemv_,:ComplexF64),
+                      (:cgemv_,:ComplexF32))
     @eval begin
         function mul!(u::Vector{$elty}, B::BarycentricMatrix2D{$elty}, v::Vector{$elty}, istart::Int, jstart::Int)
             fill!(B.temp1, zero($elty))
-            ccall((@blasfunc($fname), libblas), Void,
+            ccall((@blasfunc($fname), libblas), Nothing,
                 (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
                  Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
                  Ref{$elty}, Ptr{$elty}, Ref{BlasInt}),
@@ -68,14 +84,14 @@ for (fname, elty) in ((:dgemv_,:Float64),
                  B.V, max(1,stride(B.V,2)), pointer(v, jstart), 1,
                  $elty(1.0), B.temp1, 1)
             fill!(B.temp2, zero($elty))
-            ccall((@blasfunc($fname), libblas), Void,
+            ccall((@blasfunc($fname), libblas), Nothing,
                 (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
                  Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
                  Ref{$elty}, Ptr{$elty}, Ref{BlasInt}),
                  'N', size(B.B.F,1), size(B.B.F,2), $elty(1.0),
                  B.B.F, max(1,stride(B.B.F,2)), B.temp1, 1,
                  $elty(1.0), B.temp2, 1)
-            ccall((@blasfunc($fname), libblas), Void,
+            ccall((@blasfunc($fname), libblas), Nothing,
                 (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
                  Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
                  Ref{$elty}, Ptr{$elty}, Ref{BlasInt}),

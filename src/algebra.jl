@@ -47,9 +47,10 @@ function mul!(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{
     y
 end
 
-At_mul_B!(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) where T = At_mul_B!(y, A, x, istart, jstart, 1, 1)
+mul!(y::AbstractVecOrMat{T}, At::Transpose{T,<:AbstractMatrix{T}}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) where T = mul!(y, At, x, istart, jstart, 1, 1)
 
-function At_mul_B!(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int) where T
+function mul!(y::AbstractVecOrMat{T}, At::Transpose{T,<:AbstractMatrix{T}}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int) where T
+    A = parent(At)
     m, n = size(A)
     ishift, jshift = istart-INCY, jstart-INCX
     @inbounds for i = 1:n
@@ -63,9 +64,10 @@ function At_mul_B!(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecO
     y
 end
 
-Ac_mul_B!(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) where T = Ac_mul_B!(y, A, x, istart, jstart, 1, 1)
+mul!(y::AbstractVecOrMat{T}, Ac::Adjoint{T,<:AbstractMatrix{T}}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) where T = mul!(y, Ac, x, istart, jstart, 1, 1)
 
-function Ac_mul_B!(y::AbstractVecOrMat{T}, A::AbstractMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int) where T
+function mul!(y::AbstractVecOrMat{T}, Ac::Adjoint{T,<:AbstractMatrix{T}}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int) where T
+    A = parent(Ac)
     m, n = size(A)
     ishift, jshift = istart-INCY, jstart-INCX
     @inbounds for i = 1:n
@@ -109,11 +111,7 @@ function mul!(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T
 end
 
 # BLAS'ed
-if VERSION < v"0.7-"
-    #include("blas06.jl")
-else
-    #include("blas.jl")
-end
+# include("blas.jl")
 
 # BarycentricMatrix
 
