@@ -111,7 +111,7 @@ function mul!(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T
 end
 
 # BLAS'ed
-include("blas.jl")
+# include("blas.jl")
 
 # BarycentricMatrix
 
