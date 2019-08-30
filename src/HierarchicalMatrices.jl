@@ -1,6 +1,6 @@
 __precompile__()
 module HierarchicalMatrices
-    using Compat, Compat.LinearAlgebra
+    using LinearAlgebra
 
     BLOCKRANK(T::Type{R}) where {R<:Real} = 2round(Int, half(T)*log(3+sqrt(T(8)), inv(eps(T))))
     BLOCKRANK(T::Type{C}) where {C<:Complex} = BLOCKRANK(real(T))
@@ -11,10 +11,9 @@ module HierarchicalMatrices
     import Base: div, rem
     import Base: broadcast, Matrix, promote_op
     import Base: +, -, *, /, \, ==, !=
-    import Compat.LinearAlgebra: Factorization, rank, norm, cond, istriu, istril, issymmetric, ishermitian,
-                                   transpose
-    import Compat: adjoint
-    import Compat.LinearAlgebra.BLAS: @blasfunc, libblas, BlasInt, BlasFloat, BlasReal, BlasComplex
+    import LinearAlgebra: Factorization, rank, norm, cond, istriu, istril, issymmetric, ishermitian,
+                                   transpose, adjoint
+    import LinearAlgebra.BLAS: @blasfunc, libblas, BlasInt, BlasFloat, BlasReal, BlasComplex
 
     export BLOCKSIZE, BLOCKRANK, Block
     export AbstractLowRankMatrix, AbstractBarycentricMatrix
@@ -36,18 +35,7 @@ module HierarchicalMatrices
     two(x::Number) = oftype(x,2)
     two(::Type{T}) where {T<:Number} = convert(T, 2)
 
-    if VERSION < v"0.7-"
-        mul!(args...) = Base.A_mul_B!(args...)
-        for op in (:At_mul_B!, :Ac_mul_B!, :scale!)
-            @eval begin
-                $op(args...) = Base.$op(args...)
-            end
-        end
-    else
-        mul!(args...) = LinearAlgebra.mul!(args...)
-    end
-
-    const A_mul_B! = mul!
+    mul!(args...) = LinearAlgebra.mul!(args...)
 
     include("LowRankMatrix.jl")
     include("BarycentricMatrix.jl")

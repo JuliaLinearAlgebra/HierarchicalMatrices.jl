@@ -1,7 +1,7 @@
 @hierarchical KernelMatrix BarycentricMatrix2D Matrix
 
 
-import Compat.LinearAlgebra: matprod
+import LinearAlgebra: matprod
 function (*)(H::AbstractKernelMatrix{T}, x::AbstractVector{S}) where {T,S}
     TS = promote_op(matprod, T, S)
     mul!(zeros(TS, size(H, 1)), H, x)
@@ -11,11 +11,8 @@ function (*)(H::AbstractKernelMatrix{T}, x::AbstractMatrix{S}) where {T,S}
     mul!(zeros(TS, size(H, 1), size(x, 2)), H, x)
 end
 
-if VERSION < v"0.7-"
-    Base.A_mul_B!(u::Vector, H::AbstractKernelMatrix, v::AbstractVector) = mul!(u, H, v, 1, 1)
-else
-    LinearAlgebra.mul!(u::Vector, H::AbstractKernelMatrix, v::AbstractVector) = mul!(u, H, v, 1, 1)
-end
+LinearAlgebra.mul!(u::Vector, H::AbstractKernelMatrix, v::AbstractVector) = mul!(u, H, v, 1, 1)
+
 
 @generated function mul!(u::Vector{S}, H::KernelMatrix{S}, v::AbstractVector{S}, istart::Int, jstart::Int) where S
     L = length(fieldnames(H))-1
