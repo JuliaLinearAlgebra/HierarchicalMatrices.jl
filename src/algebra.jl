@@ -84,6 +84,26 @@ end
 
 # LowRankMatrix
 
+import LinearAlgebra: matprod
+function (*)(L::LowRankMatrix{T}, x::AbstractVector{S}) where {T,S}
+    TS = promote_op(matprod, T, S)
+    mul!(zeros(TS, size(L, 1)), L, x)
+end
+function (*)(L::LowRankMatrix{T}, x::AbstractMatrix{S}) where {T,S}
+    TS = promote_op(matprod, T, S)
+    mul!(zeros(TS, size(L, 1), size(x, 2)), L, x)
+end
+
+function (*)(Lt::Adjoint{T, <: LowRankMatrix{T}}, x::AbstractVector{S}) where {T,S}
+    TS = promote_op(matprod, T, S)
+    mul!(zeros(TS, size(Lt, 1)), Lt, x)
+end
+function (*)(Lt::Adjoint{T, <: LowRankMatrix{T}}, x::AbstractMatrix{S}) where {T,S}
+    TS = promote_op(matprod, T, S)
+    mul!(zeros(TS, size(Lt, 1), size(x, 2)), Lt, x)
+end
+
+LinearAlgebra.mul!(y::AbstractVecOrMat, L::LowRankMatrix, x::AbstractVecOrMat) = mul!(y, L, x)
 mul!(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T}) where T = mul!(y, L, x, 1, 1)
 mul!(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) where T = mul!(y, L, x, istart, jstart, 1, 1)
 
@@ -104,6 +124,34 @@ function mul!(y::AbstractVecOrMat{T}, L::LowRankMatrix{T}, x::AbstractVecOrMat{T
         tempk = temp[k]
         for i = 1:m
             y[ishift+i*INCY] += L.U[i,k]*tempk
+        end
+    end
+
+    y
+end
+
+LinearAlgebra.mul!(y::AbstractVecOrMat, Lt::Adjoint{T, <: LowRankMatrix{T}}, x::AbstractVecOrMat) where T = mul!(y, Lt, x)
+mul!(y::AbstractVecOrMat{T}, Lt::Adjoint{T, <: LowRankMatrix{T}}, x::AbstractVecOrMat{T}) where T = mul!(y, Lt, x, 1, 1)
+mul!(y::AbstractVecOrMat{T}, Lt::Adjoint{T, <: LowRankMatrix{T}}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int) where T = mul!(y, Lt, x, istart, jstart, 1, 1)
+
+function mul!(y::AbstractVecOrMat{T}, Lt::Adjoint{T, <: LowRankMatrix{T}}, x::AbstractVecOrMat{T}, istart::Int, jstart::Int, INCX::Int, INCY::Int) where T
+    m, n = size(Lt)
+    ishift, jshift = istart-INCY, jstart-INCX
+    L = parent(Lt)
+    temp = L.temp
+
+    @inbounds for k = 1:rank(L)
+        temp[k] = zero(T)
+        for j = 1:n
+            temp[k] += L.U[j,k]*x[jshift+j*INCX]
+        end
+        temp[k] *= L.Σ[k,k]
+    end
+
+    @inbounds for k = 1:rank(L)
+        tempk = temp[k]
+        for i = 1:m
+            y[ishift+i*INCY] += L.V[i,k]*tempk
         end
     end
 
@@ -340,4 +388,137 @@ function update!(::Type{T}, f::Function, A::AbstractMatrix{T}, x::Vector{T}, y::
     end
 
     A
+end
+
+
+@generated function (+)(H::HierarchicalMatrix{S1}, L::LowRankMatrix{S2}) where {S1, S2}
+    T = fieldname(H, 1)
+    str = "
+    begin
+        S = promote_type(S1, S2)
+        M, N = blocksize(H)
+        G = HierarchicalMatrix(S, M, N)
+        p = 0
+        for m = 1:M
+            q = 0
+            for n = 1:N
+                Hmn = H.assigned[m, n]
+                pr = p+1:p+blocksize(H, m, n, 1)
+                qr = q+1:q+blocksize(H, m, n, 2)
+                if Hmn == 1
+                    G[Block(m), Block(n)] = getindex(H.$T, m, n) + L[pr, qr]"
+    for l in 2:length(fieldnames(H))-1
+        T = fieldname(H, l)
+        str *= "
+                elseif Hmn == $l
+                    G[Block(m), Block(n)] = getindex(H.$T, m, n) + L[pr, qr]"
+    end
+    str *= "
+                end
+                q += blocksize(H, 1, n, 2)
+            end
+            p += blocksize(H, m, N, 1)
+        end
+        return G
+    end"
+    return Meta.parse(str)
+end
+
+@generated function (+)(L::LowRankMatrix{S1}, H::HierarchicalMatrix{S2}) where {S1, S2}
+    T = fieldname(H, 1)
+    str = "
+    begin
+        S = promote_type(S1, S2)
+        M, N = blocksize(H)
+        G = HierarchicalMatrix(S, M, N)
+        p = 0
+        for m = 1:M
+            q = 0
+            for n = 1:N
+                Hmn = H.assigned[m, n]
+                pr = p+1:p+blocksize(H, m, n, 1)
+                qr = q+1:q+blocksize(H, m, n, 2)
+                if Hmn == 1
+                    G[Block(m), Block(n)] = L[pr, qr] + getindex(H.$T, m, n)"
+    for l in 2:length(fieldnames(H))-1
+        T = fieldname(H, l)
+        str *= "
+                elseif Hmn == $l
+                    G[Block(m), Block(n)] = L[pr, qr] + getindex(H.$T, m, n)"
+    end
+    str *= "
+                end
+                q += blocksize(H, 1, n, 2)
+            end
+            p += blocksize(H, m, N, 1)
+        end
+        return G
+    end"
+    return Meta.parse(str)
+end
+
+@generated function (-)(H::HierarchicalMatrix{S1}, L::LowRankMatrix{S2}) where {S1, S2}
+    T = fieldname(H, 1)
+    str = "
+    begin
+        S = promote_type(S1, S2)
+        M, N = blocksize(H)
+        G = HierarchicalMatrix(S, M, N)
+        p = 0
+        for m = 1:M
+            q = 0
+            for n = 1:N
+                Hmn = H.assigned[m, n]
+                pr = p+1:p+blocksize(H, m, n, 1)
+                qr = q+1:q+blocksize(H, m, n, 2)
+                if Hmn == 1
+                    G[Block(m), Block(n)] = getindex(H.$T, m, n) - L[pr, qr]"
+    for l in 2:length(fieldnames(H))-1
+        T = fieldname(H, l)
+        str *= "
+                elseif Hmn == $l
+                    G[Block(m), Block(n)] = getindex(H.$T, m, n) - L[pr, qr]"
+    end
+    str *= "
+                end
+                q += blocksize(H, 1, n, 2)
+            end
+            p += blocksize(H, m, N, 1)
+        end
+        return G
+    end"
+    return Meta.parse(str)
+end
+
+@generated function (-)(L::LowRankMatrix{S1}, H::HierarchicalMatrix{S2}) where {S1, S2}
+    T = fieldname(H, 1)
+    str = "
+    begin
+        S = promote_type(S1, S2)
+        M, N = blocksize(H)
+        G = HierarchicalMatrix(S, M, N)
+        p = 0
+        for m = 1:M
+            q = 0
+            for n = 1:N
+                Hmn = H.assigned[m, n]
+                pr = p+1:p+blocksize(H, m, n, 1)
+                qr = q+1:q+blocksize(H, m, n, 2)
+                if Hmn == 1
+                    G[Block(m), Block(n)] = L[pr, qr] - getindex(H.$T, m, n)"
+    for l in 2:length(fieldnames(H))-1
+        T = fieldname(H, l)
+        str *= "
+                elseif Hmn == $l
+                    G[Block(m), Block(n)] = L[pr, qr] - getindex(H.$T, m, n)"
+    end
+    str *= "
+                end
+                q += blocksize(H, 1, n, 2)
+            end
+            p += blocksize(H, m, N, 1)
+        end
+        return G
+    end"
+    return Meta.parse(str)
 end

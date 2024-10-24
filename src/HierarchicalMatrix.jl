@@ -31,7 +31,7 @@ add_col!(H::AbstractHierarchicalMatrix, u::Vector, j::Int) = add_col!(H, u, 1, j
         for m = 1:M
             q = 0
             for n = 1:N
-                Hmn = H.assigned[m,n]
+                Hmn = H.assigned[m, n]
                 if Hmn == 1
                     mul!(y, getindex(H.$T, m, n), x, istart + p, jstart + q, INCX, INCY)"
     for l in 2:L
@@ -60,7 +60,7 @@ end
         q = 0
         for n = 1:N
             for m = 1:M
-                Hmn = H.assigned[m,n]
+                Hmn = H.assigned[m, n]
                 if Hmn == 1
                     scale!(getindex(H.$T, m, n), b, jstart + q)"
     for l in 2:L
@@ -88,7 +88,7 @@ end
         p = 0
         for m = 1:M
             for n = 1:N
-                Hmn = H.assigned[m,n]
+                Hmn = H.assigned[m, n]
                 if Hmn == 1
                     scale!(b, getindex(H.$T, m, n), istart + p)"
     for l in 2:L
@@ -123,7 +123,7 @@ end
         q -= blocksize(H, 1, n, 2)
         p = 0
         for m = 1:M
-            Hmn = H.assigned[m,n]
+            Hmn = H.assigned[m, n]
             if Hmn == 1
                 add_col!(getindex(H.$T, m, n), u, istart + p, j - q)"
     for l in 2:L

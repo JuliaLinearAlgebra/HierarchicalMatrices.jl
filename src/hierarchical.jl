@@ -171,13 +171,14 @@ macro hierarchical(HierarchicalType, Types...)
             return Meta.parse(str)
         end
 
-        @generated function (+)(G::$HierarchicalType, H::$HierarchicalType)
+        @generated function (+)(G::$HierarchicalType{S}, H::$HierarchicalType{S}) where S
             L = length(fieldnames(H))-1
             T = fieldname(H, 1)
             str = "
             begin
-                F = deepcopy(G)
+                S = promote_type(S1, S2)
                 M, N = HierarchicalMatrices.blocksize(H)
+                F = HierarchicalMatrix(S, M, N)
                 for m = 1:M
                     for n = 1:N
                         Gmn = G.assigned[m,n]
@@ -199,13 +200,14 @@ macro hierarchical(HierarchicalType, Types...)
             return Meta.parse(str)
         end
 
-        @generated function (-)(G::$HierarchicalType, H::$HierarchicalType)
+        @generated function (-)(G::$HierarchicalType{S1}, H::$HierarchicalType{S2}) where {S1, S2}
             L = length(fieldnames(H))-1
             T = fieldname(H, 1)
             str = "
             begin
-                F = deepcopy(G)
+                S = promote_type(S1, S2)
                 M, N = HierarchicalMatrices.blocksize(H)
+                F = HierarchicalMatrix(S, M, N)
                 for m = 1:M
                     for n = 1:N
                         Gmn = G.assigned[m,n]

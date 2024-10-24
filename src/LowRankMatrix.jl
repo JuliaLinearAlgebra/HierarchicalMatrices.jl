@@ -54,6 +54,10 @@ function getindex(L::LowRankMatrix{T},i::Integer,j::Integer) where T
     ret
 end
 
+function getindex(L::LowRankMatrix, ir::UnitRange{Int}, jr::UnitRange{Int})
+    LowRankMatrix(L.U[ir, :], L.Σ, L.V[jr, :])
+end
+
 function convert(::Type{LowRankMatrix{T}},L::LowRankMatrix) where T
     LowRankMatrix(convert(Matrix{T}, L.U), convert(Diagonal{T}, L.Σ), convert(Matrix{T}, L.V))
 end
@@ -73,9 +77,9 @@ function getrank(σ::Vector{T})  where T<:Real
 end
 
 function svdtrunc(A::AbstractMatrix)
-    SVD = svdfact(A)
-    r = getrank(SVD[:S])
-    LowRankMatrix(SVD[:U][:,1:r], Diagonal(SVD[:S][1:r]), SVD[:V][:,1:r])
+    SVD = svd(A)
+    r = getrank(SVD.S)
+    LowRankMatrix(SVD.U[:,1:r], Diagonal(SVD.S[1:r]), SVD.V[:,1:r])
 end
 
 function lrzeros(::Type{T}, m::Int, n::Int) where T
@@ -86,60 +90,68 @@ function lrzeros(::Type{T}, m::Int, n::Int) where T
 end
 
 function (+)(L1::LowRankMatrix{T}, L2::LowRankMatrix{T}) where T
-    QRU = qrfact!(hcat(L1.U, L2.U))
-    QRV = qrfact!(hcat(L1.V, L2.V))
-    SVD = svdfact!(QRU[:R]*Diagonal(vcat(L1.Σ.diag, L2.Σ.diag))*QRV[:R]')
-    r = getrank(SVD[:S])
+    QRU = qr!(hcat(L1.U, L2.U))
+    QRV = qr!(hcat(L1.V, L2.V))
+    SVD = svd!(QRU.R*Diagonal(vcat(L1.Σ.diag, L2.Σ.diag))*QRV.R')
+    r = getrank(SVD.S)
 
-    LowRankMatrix((QRU[:Q]*SVD[:U])[:,1:r], Diagonal(SVD[:S][1:r]), (QRV[:Q]*SVD[:V])[:,1:r])
+    LowRankMatrix((QRU.Q*SVD.U)[:,1:r], Diagonal(SVD.S[1:r]), (QRV.Q*SVD.V)[:,1:r])
 end
 
 function (-)(L1::LowRankMatrix{T}, L2::LowRankMatrix{T}) where T
-    QRU = qrfact!(hcat(L1.U, L2.U))
-    QRV = qrfact!(hcat(L1.V, L2.V))
-    SVD = svdfact!(QRU[:R]*Diagonal(vcat(L1.Σ.diag, -L2.Σ.diag))*QRV[:R]')
-    r = getrank(SVD[:S])
+    QRU = qr!(hcat(L1.U, L2.U))
+    QRV = qr!(hcat(L1.V, L2.V))
+    SVD = svd!(QRU.R*Diagonal(vcat(L1.Σ.diag, -L2.Σ.diag))*QRV.R')
+    r = getrank(SVD.S)
 
-    LowRankMatrix((QRU[:Q]*SVD[:U])[:,1:r], Diagonal(SVD[:S][1:r]), (QRV[:Q]*SVD[:V])[:,1:r])
+    LowRankMatrix((QRU.Q*SVD.U)[:,1:r], Diagonal(SVD.S[1:r]), (QRV.Q*SVD.V)[:,1:r])
 end
 
 function (*)(L1::LowRankMatrix{T}, L2::LowRankMatrix{T}) where T
-    SVD = svdfact!(L1.Σ*L1.V'*L2.U*L2.Σ)
-    r = getrank(SVD[:S])
+    SVD = svd!(L1.Σ*L1.V'L2.U*L2.Σ)
+    r = getrank(SVD.S)
 
-    LowRankMatrix((L1.U*SVD[:U])[:,1:r], Diagonal(SVD[:S][1:r]), (L2.V*SVD[:V])[:,1:r])
+    LowRankMatrix((L1.U*SVD.U)[:,1:r], Diagonal(SVD.S[1:r]), (L2.V*SVD.V)[:,1:r])
+end
+
+function (*)(L1::Adjoint{T, <: LowRankMatrix{T}}, L2::LowRankMatrix{T}) where T
+    L1P = parent(L1)
+    SVD = svd!(L1P.Σ*L1P.U'L2.U*L2.Σ)
+    r = getrank(SVD.S)
+
+    LowRankMatrix((L1P.V*SVD.U)[:,1:r], Diagonal(SVD.S[1:r]), (L2.V*SVD.V)[:,1:r])
 end
 
 function (*)(A::AbstractMatrix{T}, L::LowRankMatrix{T}) where T
-    QRU = qrfact!(A*L.U)
-    SVD = svdfact!(QRU[:R]*L.Σ)
-    r = getrank(SVD[:S])
+    QRU = qr!(A*L.U)
+    SVD = svd!(QRU.R*L.Σ)
+    r = getrank(SVD.S)
 
-    LowRankMatrix((QRU[:Q]*SVD[:U])[:,1:r], Diagonal(SVD[:S][1:r]), (L.V*SVD[:V])[:,1:r])
+    LowRankMatrix((QRU.Q*SVD.U)[:,1:r], Diagonal(SVD.S[1:r]), (L.V*SVD.V)[:,1:r])
 end
 
 function (*)(L::LowRankMatrix{T}, A::AbstractMatrix{T}) where T
-    QRV = qrfact!(A'*L.V)
-    SVD = svdfact!(L.Σ*QRV[:R]')
-    r = getrank(SVD[:S])
+    QRV = qr!(A'L.V)
+    SVD = svd!(L.Σ*QRV.R')
+    r = getrank(SVD.S)
 
-    LowRankMatrix((L.U*SVD[:U])[:,1:r], Diagonal(SVD[:S][1:r]), (QRV[:Q]*SVD[:V])[:,1:r])
+    LowRankMatrix((L.U*SVD.U)[:,1:r], Diagonal(SVD.S[1:r]), (QRV.Q*SVD.V)[:,1:r])
 end
 
 function (*)(A::Diagonal{T}, L::LowRankMatrix{T}) where T
-    QRU = qrfact!(A*L.U)
-    SVD = svdfact!(QRU[:R]*L.Σ)
-    r = getrank(SVD[:S])
+    QRU = qr!(A*L.U)
+    SVD = svd!(QRU.R*L.Σ)
+    r = getrank(SVD.S)
 
-    LowRankMatrix((QRU[:Q]*SVD[:U])[:,1:r], Diagonal(SVD[:S][1:r]), (L.V*SVD[:V])[:,1:r])
+    LowRankMatrix((QRU.Q*SVD.U)[:,1:r], Diagonal(SVD.S[1:r]), (L.V*SVD.V)[:,1:r])
 end
 
 function (*)(L::LowRankMatrix{T}, A::Diagonal{T}) where T
-    QRV = qrfact!(A'*L.V)
-    SVD = svdfact!(L.Σ*QRV[:R]')
-    r = getrank(SVD[:S])
+    QRV = qr!(A'L.V)
+    SVD = svd!(L.Σ*QRV.R')
+    r = getrank(SVD.S)
 
-    LowRankMatrix((L.U*SVD[:U])[:,1:r], Diagonal(SVD[:S][1:r]), (QRV[:Q]*SVD[:V])[:,1:r])
+    LowRankMatrix((L.U*SVD.U)[:,1:r], Diagonal(SVD.S[1:r]), (QRV.Q*SVD.V)[:,1:r])
 end
 
 (*)(B::T, L::LowRankMatrix{T}) where {T<:Number} = LowRankMatrix(L.U, B*L.Σ, L.V)

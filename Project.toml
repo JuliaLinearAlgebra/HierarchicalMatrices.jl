@@ -1,6 +1,6 @@
 name = "HierarchicalMatrices"
 uuid = "7c893195-952b-5c83-bb6e-be12f22eed51"
-version = "0.2"
+version = "0.2.1"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
