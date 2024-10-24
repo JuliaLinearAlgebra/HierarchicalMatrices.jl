@@ -101,7 +101,7 @@ function solvetransposed(R::HierarchicalMatrix{T}, L::LowRankMatrix{T}) where T
     for j in 1:r
         Û[:, j] = solvetransposed(R, U[:, j])
     end
-    return HierarchicalMatrices.LowRankMatrix(Û, L.Σ, L.V)
+    return LowRankMatrix(Û, L.Σ, L.V)
 end
 
 function solvetransposed(R::HierarchicalMatrix{T}, M::Matrix{T}) where T
@@ -120,7 +120,7 @@ function solvetransposed(R::Matrix{T}, L::LowRankMatrix{T}) where T
     for j in 1:r
         Û[:, j] = solvetransposed(R, U[:, j])
     end
-    return HierarchicalMatrices.LowRankMatrix(Û, L.Σ, L.V)
+    return LowRankMatrix(Û, L.Σ, L.V)
 end
 
 function solvetransposed(R::Matrix{T}, M::Matrix{T}) where T
