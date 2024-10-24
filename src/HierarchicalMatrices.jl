@@ -6,6 +6,10 @@ module HierarchicalMatrices
     BLOCKRANK(T::Type{C}) where {C<:Complex} = BLOCKRANK(real(T))
     BLOCKSIZE(T) = 4BLOCKRANK(T)
 
+    STATICBLOCKSIZE(::Type{Float32}) = 32
+    STATICBLOCKSIZE(::Type{Float64}) = 64
+    STATICBLOCKSIZE(::Type{T}) where T = STATICBLOCKSIZE(Float64)
+
     import Base: convert, view, size
     import Base: copy, getindex, setindex!, show, one, zero, inv, isless
     import Base: div, rem
@@ -15,7 +19,7 @@ module HierarchicalMatrices
                                    transpose, adjoint
     import LinearAlgebra.BLAS: @blasfunc, libblas, BlasInt, BlasFloat, BlasReal, BlasComplex
 
-    export BLOCKSIZE, BLOCKRANK, Block
+    export BLOCKSIZE, BLOCKRANK, Block, STATICBLOCKSIZE
     export AbstractLowRankMatrix, AbstractBarycentricMatrix
     export LowRankMatrix, BarycentricMatrix2D, EvenBarycentricMatrix
     export @hierarchical, barycentricmatrix, blocksize, blockgetindex
@@ -44,5 +48,6 @@ module HierarchicalMatrices
     include("HierarchicalMatrix.jl")
     include("KernelMatrix.jl")
     include("algebra.jl")
+    include("cholesky.jl")
 
 end # module

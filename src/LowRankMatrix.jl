@@ -33,6 +33,9 @@ struct LowRankMatrix{T} <: AbstractLowRankMatrix{T}
 end
 
 LowRankMatrix(U::Matrix{T}, Σ::Diagonal{T}, V::Matrix{T}) where T = LowRankMatrix(U, Σ, V, threadsafezeros(T, length(Σ.diag)))
+LowRankMatrix(U::Matrix{T}, Σ::Diagonal{T}, V::AbstractMatrix{T}) where T = LowRankMatrix(U, Σ, Matrix(V))
+LowRankMatrix(U::AbstractMatrix{T}, Σ::Diagonal{T}, V::Matrix{T}) where T = LowRankMatrix(Matrix(U), Σ, V)
+LowRankMatrix(U::AbstractMatrix{T}, Σ::Diagonal{T}, V::AbstractMatrix{T}) where T = LowRankMatrix(Matrix(U), Σ, Matrix(V))
 
 size(L::LowRankMatrix) = size(L.U, 1), size(L.V, 1)
 rank(L::LowRankMatrix) = length(L.Σ.diag)
